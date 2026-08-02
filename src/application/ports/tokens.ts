@@ -4,3 +4,4 @@
 export const FILE_STORAGE = Symbol('FILE_STORAGE');
 export const IMPORT_REPOSITORY = Symbol('IMPORT_REPOSITORY');
 export const CLOCK = Symbol('CLOCK');
+export const ID_GENERATOR = Symbol('ID_GENERATOR');
