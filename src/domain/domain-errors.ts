@@ -90,3 +90,35 @@ export class FileTooLargeError extends DomainError {
     });
   }
 }
+
+export class InfrastructureError extends DomainError {
+  readonly code: string;
+  readonly httpStatus = 503;
+  readonly category = ErrorCategory.INFRASTRUCTURE;
+  readonly retryable: boolean;
+
+  constructor(
+    code: string,
+    safeMessage: string,
+    options: DomainErrorOptions & { retryable: boolean },
+  ) {
+    super(safeMessage, options);
+    this.code = code;
+    this.retryable = options.retryable;
+  }
+}
+
+export function wrapDatabaseError(
+  cause: unknown,
+  operation: string,
+): InfrastructureError {
+  return new InfrastructureError(
+    'DATABASE_UNAVAILABLE',
+    'A database operation failed.',
+    {
+      cause,
+      context: { operation },
+      retryable: true,
+    },
+  );
+}
