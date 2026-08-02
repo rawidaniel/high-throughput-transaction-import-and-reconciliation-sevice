@@ -2,3 +2,4 @@
 // accidental collisions and gives you autocomplete via TypeScript.
 
 export const FILE_STORAGE = Symbol('FILE_STORAGE');
+export const IMPORT_REPOSITORY = Symbol('IMPORT_REPOSITORY');
