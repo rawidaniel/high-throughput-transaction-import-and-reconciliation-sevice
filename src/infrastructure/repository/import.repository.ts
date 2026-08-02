@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'generated/prisma/client';
+import { wrapDatabaseError } from 'src/domain/domain-errors';
 import {
   CreateImportInput,
   CreateImportResult,
@@ -7,7 +8,6 @@ import {
   ImportRepositoryPort,
 } from '../../application/ports/import-repository.port';
 import { PrismaService } from '../prisma/prisma.service';
-import { wrapDatabaseError } from 'src/domain/domain-errors';
 
 @Injectable()
 export class ImportRepository implements ImportRepositoryPort {
@@ -61,11 +61,39 @@ export class ImportRepository implements ImportRepositoryPort {
   }
 
   private isIdempotencyKeyConflict(err: unknown): boolean {
-    return (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === 'P2002' &&
-      ((err.meta?.target as string[] | undefined)?.includes('key') ?? false)
-    );
+    if (
+      !(err instanceof Prisma.PrismaClientKnownRequestError) ||
+      err.code !== 'P2002'
+    ) {
+      return false;
+    }
+
+    const fields = this.extractViolatedFields(err);
+    return fields.length === 1 && fields[0] === 'key';
+  }
+
+  private extractViolatedFields(
+    err: Prisma.PrismaClientKnownRequestError,
+  ): string[] {
+    const target = err.meta?.target;
+    if (Array.isArray(target)) {
+      return target as string[];
+    }
+
+    const meta = err.meta as
+      | {
+          driverAdapterError?: {
+            cause?: { constraint?: { fields?: unknown } };
+          };
+        }
+      | undefined;
+
+    const fields = meta?.driverAdapterError?.cause?.constraint?.fields;
+    if (Array.isArray(fields)) {
+      return fields as string[];
+    }
+
+    return [];
   }
 
   private toDomain(record: {
@@ -82,8 +110,6 @@ export class ImportRepository implements ImportRepositoryPort {
     createdAt: Date;
     updatedAt: Date;
   }): ImportRecord {
-    // Explicit mapping keeps `domain`/`application` decoupled from Prisma's
-    // generated types — swapping ORMs later only touches this method.
     return { ...record, status: record.status as ImportRecord['status'] };
   }
 }
