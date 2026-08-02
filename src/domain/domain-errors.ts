@@ -37,3 +37,13 @@ export abstract class DomainError extends Error {
     };
   }
 }
+
+export class MissingIdempotencyKeyError extends DomainError {
+  readonly code = 'MISSING_IDEMPOTENCY_KEY';
+  readonly httpStatus = 400;
+  readonly category = ErrorCategory.REQUEST_VALIDATION;
+  readonly retryable = false;
+  constructor() {
+    super('Idempotency-Key header is required.');
+  }
+}
