@@ -66,3 +66,27 @@ export class NoFileUploadedError extends DomainError {
     super('No file part found in multipart request.');
   }
 }
+
+export class InvalidFileTypeError extends DomainError {
+  readonly code = 'INVALID_FILE_TYPE';
+  readonly httpStatus = 400;
+  readonly category = ErrorCategory.REQUEST_VALIDATION;
+  readonly retryable = false;
+  constructor(received: string) {
+    super('Unsupported file type. Allowed: .ndjson, .jsonl, .json', {
+      context: { received }, // internal only — not interpolated into the client-facing message
+    });
+  }
+}
+
+export class FileTooLargeError extends DomainError {
+  readonly code = 'IMPORT_FILE_TOO_LARGE';
+  readonly httpStatus = 413;
+  readonly category = ErrorCategory.REQUEST_VALIDATION;
+  readonly retryable = false;
+  constructor(limitBytes: number) {
+    super('The uploaded file exceeds the allowed size', {
+      context: { limitBytes },
+    });
+  }
+}
