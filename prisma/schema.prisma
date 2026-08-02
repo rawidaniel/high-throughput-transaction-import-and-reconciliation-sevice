@@ -4,12 +4,149 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
-  moduleFormat    = "cjs"
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  CANCELLING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum JobStatus {
+  PENDING
+  CLAIMED
+  PROCESSING
+  CANCELLING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Import {
+  id       String       @id @default(uuid())
+  provider String?
+  status   ImportStatus @default(PENDING)
+
+  totalRecords   Int @default(0)
+  processedCount Int @default(0)
+  acceptedCount  Int @default(0)
+  rejectedCount  Int @default(0)
+  duplicateCount Int @default(0)
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+  failureReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  idempotencyKey  IdempotencyKey?
+  files           ImportFile[]
+  transactions    Transaction[]
+  rejectedRecords RejectedRecord[]
+  job             ProcessingJob?
+
+  @@map("imports")
+}
+
+model IdempotencyKey {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  importId  String   @unique
+  import    Import   @relation(fields: [importId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@map("idempotency_keys")
+}
+
+model ImportFile {
+  id          String   @id @default(uuid())
+  importId    String
+  import      Import   @relation(fields: [importId], references: [id], onDelete: Cascade)
+  storagePath String
+  size        BigInt
+  checksum    String
+  createdAt   DateTime @default(now())
+
+  @@index([importId])
+  @@map("import_files")
+}
+
+model Transaction {
+  id       String @id @default(uuid())
+  importId String
+  import   Import @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  provider      String
+  transactionId String
+  accountId     String
+  merchantId    String
+
+  amount    Decimal  @db.Decimal(18, 2)
+  currency  String   @db.VarChar(3)
+  timestamp DateTime
+
+  fingerprint String
+  riskScore   Float
+  riskLevel   RiskLevel
+
+  createdAt DateTime @default(now())
+
+  @@unique([provider, transactionId], name: "uq_provider_transaction")
+  @@index([importId, currency])
+  @@index([importId, riskLevel])
+  @@index([importId, merchantId])
+  @@index([fingerprint])
+  @@map("transactions")
+}
+
+model RejectedRecord {
+  id       String @id @default(uuid())
+  importId String
+  import   Import @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  lineNumber        Int
+  errorCode         String
+  message           String
+  rawValueTruncated Json
+
+  createdAt DateTime @default(now())
+
+  @@index([importId, id])
+  @@map("rejected_records")
+}
+
+model ProcessingJob {
+  id       String @id @default(uuid())
+  importId String @unique
+  import   Import @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  status       JobStatus @default(PENDING)
+  attemptCount Int       @default(0)
+
+  leasedBy    String?
+  leasedUntil DateTime?
+  lastError   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, leasedUntil])
+  @@map("processing_jobs")
+}
