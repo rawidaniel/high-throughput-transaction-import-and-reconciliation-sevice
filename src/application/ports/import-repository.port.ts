@@ -39,4 +39,5 @@ export interface CreateImportResult {
 
 export interface ImportRepositoryPort {
   createOrReturnExisting(input: CreateImportInput): Promise<CreateImportResult>;
+  findById(id: string): Promise<ImportRecord | null>;
 }
