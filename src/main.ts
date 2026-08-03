@@ -18,9 +18,10 @@ async function bootstrap() {
 
   await app.register(multipart, {
     limits: {
-      fileSize: parseInt(process.env.MAX_UPLOAD_BYTES || '500'),
+      fileSize: parseInt(process.env.MAX_UPLOAD_BYTES || '500') * 1024 * 1024,
       files: 1,
     },
+    throwFileSizeLimit: true,
   });
 
   await app.listen(process.env.PORT ?? 3000);
