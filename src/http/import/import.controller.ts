@@ -8,6 +8,8 @@ import {
 import { CreateImportUseCase } from '../../application/use-cases/create-import.use-case';
 import { CreateImportResponseDto } from './dto/create-import-response.dto';
 
+const EXPECTED_FIELD_NAME = 'file';
+
 @Controller('v1/imports')
 export class ImportController {
   constructor(private readonly createImport: CreateImportUseCase) {}
@@ -26,9 +28,16 @@ export class ImportController {
       );
     }
 
-    const part = await request.file();
+    const part = await this.readFilePart(request);
+
     if (!part) {
       throw new NoFileUploadedError();
+    }
+
+    if (part.fieldname !== EXPECTED_FIELD_NAME) {
+      throw new InvalidRequestBodyError(
+        `Expected a file field named "${EXPECTED_FIELD_NAME}", received "${part.fieldname}".`,
+      );
     }
 
     const result = await this.createImport.execute({
@@ -39,5 +48,15 @@ export class ImportController {
     });
 
     return CreateImportResponseDto.from(result.importRecord);
+  }
+
+  private async readFilePart(request: FastifyRequest) {
+    try {
+      return await request.file();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Malformed multipart request.';
+      throw new InvalidRequestBodyError(message);
+    }
   }
 }
