@@ -5,11 +5,11 @@ import { mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { FileTooLargeError } from 'src/domain/domain-errors';
 import {
   FileStoragePort,
   SavedFile,
 } from '../../application/ports/file-storage.port';
+import { FileTooLargeError } from '../../domain/domain-errors';
 
 const STORAGE_ROOT =
   process.env.UPLOAD_STORAGE_DIR ??

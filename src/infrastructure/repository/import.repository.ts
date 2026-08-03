@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'generated/prisma/client';
-import { wrapDatabaseError } from 'src/domain/domain-errors';
 import {
   CreateImportInput,
   CreateImportResult,
   ImportRecord,
   ImportRepositoryPort,
 } from '../../application/ports/import-repository.port';
+import { wrapDatabaseError } from '../../domain/domain-errors';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()

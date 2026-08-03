@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '../../../generated/prisma/client';
 import {
   ClaimedJob,
   JobRepositoryPort,
   JobStatus,
 } from '../../application/ports/job-repository.port';
-import { wrapDatabaseError } from 'src/domain/domain-errors';
+import { wrapDatabaseError } from '../../domain/domain-errors';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '../../../generated/prisma/client';
 
 interface RawClaimRow {
   id: string;
@@ -117,12 +117,6 @@ export class JobRepository implements JobRepositoryPort {
     importData: Prisma.ImportUpdateInput,
   ): Promise<void> {
     try {
-      // NOTE: these two updates are NOT wrapped in a single $transaction
-      // here — a deliberate, documented simplification for this phase. A
-      // crash between the two would leave imports/processing_jobs briefly
-      // inconsistent; Phase 11's crash-recovery sweep is where that gets
-      // fully closed. Worth calling out explicitly in your ADRs rather
-      // than leaving it as a silent gap.
       await this.prisma.processingJob.update({
         where: { id: jobId },
         data: jobData,
