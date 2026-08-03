@@ -1,16 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { computeFingerprint } from '../../domain/transaction/compute-fingerprint';
+import { parseNdjsonLine } from '../../domain/transaction/parse-ndjson-line';
+import { validateTransaction } from '../../domain/transaction/validate-transaction';
+import { type ImportFileRepositoryPort } from '../ports/import-file-repository.port';
 import {
   ClaimedJob,
   type JobRepositoryPort,
 } from '../ports/job-repository.port';
+import { type LineReaderPort } from '../ports/line-reader.port';
 import {
   IMPORT_FILE_REPOSITORY,
   JOB_REPOSITORY,
   LINE_READER,
 } from '../ports/tokens';
-import { type ImportFileRepositoryPort } from '../ports/import-file-repository.port';
-import { type LineReaderPort } from '../ports/line-reader.port';
-import { parseNdjsonLine } from '../../domain/transaction/parse-ndjson-line';
 
 const CANCELLATION_CHECK_INTERVAL = 500;
 
@@ -24,10 +26,10 @@ export class ProcessImportFileUseCase {
   ) {}
 
   async execute(job: ClaimedJob): Promise<void> {
-    const storagePath =
-      await this.importFileRepository.findStoragePathByImportId(job.importId);
-
-    if (!storagePath) {
+    const fileLocation = await this.importFileRepository.findByImportId(
+      job.importId,
+    );
+    if (!fileLocation) {
       await this.jobRepository.markFailed(
         job.id,
         job.importId,
@@ -36,6 +38,8 @@ export class ProcessImportFileUseCase {
       return;
     }
 
+    const { storagePath, provider } = fileLocation;
+    const fallbackProvider = provider ?? '';
     await this.jobRepository.markProcessing(job.id, job.importId);
 
     let lineNumber = 0;
@@ -67,7 +71,22 @@ export class ProcessImportFileUseCase {
           continue;
         }
 
+        const validation = validateTransaction(result.data, fallbackProvider);
+
+        if (!validation.ok) {
+          // rejectedCount++;
+          console.warn('Rejected record during import processing', {
+            importId: job.importId,
+            lineNumber: result.lineNumber,
+            errorCode: validation.errorCode,
+            field: validation.field,
+          });
+          continue;
+        }
+        const fingerprint = computeFingerprint(validation.transaction);
         // acceptedCount++;
+
+        void fingerprint;
       }
 
       if (wasCancelled) {

@@ -57,7 +57,6 @@ export class ImportController {
 
   @Get(':id')
   async getStatus(@Param('id') id: string): Promise<ImportStatusDto> {
-    console.log({ id });
     const record = await this.getImportStatus.execute(id);
     return ImportStatusDto.from(record);
   }
