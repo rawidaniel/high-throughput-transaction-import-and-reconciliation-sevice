@@ -91,6 +91,18 @@ export class FileTooLargeError extends DomainError {
   }
 }
 
+export class ImportNotFoundError extends DomainError {
+  readonly code = 'IMPORT_NOT_FOUND';
+  readonly httpStatus = 404;
+  readonly category = ErrorCategory.BUSINESS_RULE;
+  readonly retryable = false;
+  constructor(id: string) {
+    super('The requested import does not exist.', {
+      context: { importId: id },
+    });
+  }
+}
+
 export class InfrastructureError extends DomainError {
   readonly code: string;
   readonly httpStatus = 503;
