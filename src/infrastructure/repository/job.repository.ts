@@ -52,9 +52,28 @@ export class JobRepository implements JobRepositoryPort {
         importId: row.importId,
         status: row.status as JobStatus,
         attemptCount: row.attemptCount,
+        workerId,
       };
     } catch (err) {
       throw wrapDatabaseError(err, 'JobRepository.claimNext');
+    }
+  }
+
+  async renewLease(
+    jobId: string,
+    workerId: string,
+    leaseDurationMs: number,
+  ): Promise<void> {
+    const leaseSeconds = Math.max(1, Math.ceil(leaseDurationMs / 1000));
+    try {
+      await this.prisma.$executeRaw(Prisma.sql`
+        UPDATE processing_jobs
+        SET "leasedUntil" = now() + (${leaseSeconds} || ' seconds')::interval,
+            "updatedAt" = now()
+        WHERE id = ${jobId} AND "leasedBy" = ${workerId};
+      `);
+    } catch (err) {
+      throw wrapDatabaseError(err, 'JobRepository.renewLease');
     }
   }
 
@@ -70,12 +89,16 @@ export class JobRepository implements JobRepositoryPort {
     }
   }
 
-  async markProcessing(jobId: string, importId: string): Promise<void> {
+  async markProcessing(
+    jobId: string,
+    importId: string,
+    totalRecords: number,
+  ): Promise<void> {
     await this.updateBoth(
       jobId,
       importId,
       { status: 'PROCESSING' },
-      { status: 'PROCESSING', startedAt: new Date() },
+      { status: 'PROCESSING', startedAt: new Date(), totalRecords },
     );
   }
 

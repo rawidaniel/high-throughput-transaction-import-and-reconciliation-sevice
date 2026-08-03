@@ -12,6 +12,7 @@ export interface ClaimedJob {
   importId: string;
   status: JobStatus;
   attemptCount: number;
+  workerId: string;
 }
 
 export interface JobRepositoryPort {
@@ -20,9 +21,19 @@ export interface JobRepositoryPort {
     leaseDurationMs: number,
   ): Promise<ClaimedJob | null>;
 
+  renewLease(
+    jobId: string,
+    workerId: string,
+    leaseDurationMs: number,
+  ): Promise<void>;
+
   getStatus(jobId: string): Promise<JobStatus | null>;
 
-  markProcessing(jobId: string, importId: string): Promise<void>;
+  markProcessing(
+    jobId: string,
+    importId: string,
+    totalRecords: number,
+  ): Promise<void>;
   markCompleted(jobId: string, importId: string): Promise<void>;
   markFailed(jobId: string, importId: string, reason: string): Promise<void>;
   markCancelled(jobId: string, importId: string): Promise<void>;
