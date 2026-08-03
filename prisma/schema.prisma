@@ -4,11 +4,11 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider              = "prisma-client"
-  output                = "../generated/prisma"
-  moduleFormat          = "cjs"
+  provider               = "prisma-client"
+  output                 = "../generated/prisma"
+  moduleFormat           = "cjs"
   generatedFileExtension = "ts"
-  importFileExtension   = ""
+  importFileExtension    = ""
 }
 
 datasource db {
@@ -107,6 +107,7 @@ model Transaction {
   fingerprint String
   riskScore   Float
   riskLevel   RiskLevel
+  description String?   @db.VarChar(500)
 
   createdAt DateTime @default(now())
 
