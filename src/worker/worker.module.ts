@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import {
   IMPORT_FILE_REPOSITORY,
   JOB_REPOSITORY,
@@ -13,7 +14,11 @@ import { SystemModule } from '../modules/system.module';
 import { JobPollerService } from '../worker/job-poller.service';
 
 @Module({
-  imports: [PrismaModule, SystemModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
+    SystemModule,
+  ],
   providers: [
     { provide: JOB_REPOSITORY, useClass: JobRepository },
     { provide: IMPORT_FILE_REPOSITORY, useClass: ImportFileRepository },
