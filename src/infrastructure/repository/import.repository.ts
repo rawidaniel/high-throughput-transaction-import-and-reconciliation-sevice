@@ -60,6 +60,15 @@ export class ImportRepository implements ImportRepositoryPort {
     }
   }
 
+  async findById(id: string): Promise<ImportRecord | null> {
+    try {
+      const record = await this.prisma.import.findUnique({ where: { id } });
+      return record ? this.toDomain(record) : null;
+    } catch (err) {
+      throw wrapDatabaseError(err, 'ImportRepository.findById');
+    }
+  }
+
   private isIdempotencyKeyConflict(err: unknown): boolean {
     if (
       !(err instanceof Prisma.PrismaClientKnownRequestError) ||
