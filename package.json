@@ -19,7 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prepare": "husky",
-    "start:worker:dev": "nodemon --exec ts-node src/worker.main.ts"
+    "start:worker:dev": "nodemon --exec \"node -r tsconfig-paths/register -r ts-node/register src/worker.main.ts\""
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.0",
