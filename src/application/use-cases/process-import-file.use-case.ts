@@ -9,12 +9,18 @@ import {
 } from '../ports/job-repository.port';
 import { type LineReaderPort } from '../ports/line-reader.port';
 import {
+  type RiskScoringPoolPort,
+  ScoringInput,
+} from '../ports/risk-scoring-pool.port';
+import {
   IMPORT_FILE_REPOSITORY,
   JOB_REPOSITORY,
   LINE_READER,
+  RISK_SCORING_POOL,
 } from '../ports/tokens';
 
 const CANCELLATION_CHECK_INTERVAL = 500;
+const SCORING_BATCH_SIZE = Number(process.env.SCORING_BATCH_SIZE ?? 500);
 
 @Injectable()
 export class ProcessImportFileUseCase {
@@ -23,6 +29,8 @@ export class ProcessImportFileUseCase {
     private readonly importFileRepository: ImportFileRepositoryPort,
     @Inject(JOB_REPOSITORY) private readonly jobRepository: JobRepositoryPort,
     @Inject(LINE_READER) private readonly lineReader: LineReaderPort,
+    @Inject(RISK_SCORING_POOL)
+    private readonly riskScoringPool: RiskScoringPoolPort,
   ) {}
 
   async execute(job: ClaimedJob): Promise<void> {
@@ -45,7 +53,11 @@ export class ProcessImportFileUseCase {
     let lineNumber = 0;
     // let acceptedCount = 0;
     // let rejectedCount = 0;
+    let scoredCount = 0;
     let wasCancelled = false;
+
+    // Accumulates validated records until SCORING_BATCH_SIZE is reached.
+    let batch: ScoringInput[] = [];
 
     try {
       for await (const rawLine of this.lineReader.readLines(storagePath)) {
@@ -83,10 +95,27 @@ export class ProcessImportFileUseCase {
           });
           continue;
         }
-        const fingerprint = computeFingerprint(validation.transaction);
-        // acceptedCount++;
 
-        void fingerprint;
+        // acceptedCount++;
+        batch.push({
+          transaction: validation.transaction,
+          fingerprint: computeFingerprint(validation.transaction),
+        });
+
+        if (batch.length >= SCORING_BATCH_SIZE) {
+          const scored = await this.riskScoringPool.scoreBatch(batch);
+          scoredCount += scored.length;
+          console.log('11', { scoredCount });
+
+          batch = [];
+        }
+      }
+
+      if (batch.length > 0 && !wasCancelled) {
+        const scored = await this.riskScoringPool.scoreBatch(batch);
+        scoredCount += scored.length;
+        console.log('222', { scoredCount });
+        batch = [];
       }
 
       if (wasCancelled) {

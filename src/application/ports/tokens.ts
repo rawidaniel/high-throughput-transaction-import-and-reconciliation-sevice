@@ -8,3 +8,4 @@ export const ID_GENERATOR = Symbol('ID_GENERATOR');
 export const IMPORT_FILE_REPOSITORY = Symbol('IMPORT_FILE_REPOSITORY');
 export const JOB_REPOSITORY = Symbol('JOB_REPOSITORY');
 export const LINE_READER = Symbol('LINE_READER');
+export const RISK_SCORING_POOL = Symbol('RISK_SCORING_POOL');

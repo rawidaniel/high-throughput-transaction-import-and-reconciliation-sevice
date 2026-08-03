@@ -4,8 +4,10 @@ import {
   IMPORT_FILE_REPOSITORY,
   JOB_REPOSITORY,
   LINE_READER,
+  RISK_SCORING_POOL,
 } from '../application/ports/tokens';
 import { ProcessImportFileUseCase } from '../application/use-cases/process-import-file.use-case';
+import { WorkerThreadPool } from '../infrastructure/concurrency/worker-thread-pool';
 import { PrismaModule } from '../infrastructure/prisma/prisma.module';
 import { ImportFileRepository } from '../infrastructure/repository/import-file.repository';
 import { JobRepository } from '../infrastructure/repository/job.repository';
@@ -23,6 +25,7 @@ import { JobPollerService } from '../worker/job-poller.service';
     { provide: JOB_REPOSITORY, useClass: JobRepository },
     { provide: IMPORT_FILE_REPOSITORY, useClass: ImportFileRepository },
     { provide: LINE_READER, useClass: ReadlineLineReader },
+    { provide: RISK_SCORING_POOL, useClass: WorkerThreadPool },
     ProcessImportFileUseCase,
     JobPollerService,
   ],
