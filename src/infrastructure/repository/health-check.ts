@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { HealthCheckPort } from '../../application/ports/health-check.port';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class HealthCheck implements HealthCheckPort {
@@ -21,5 +21,9 @@ export class HealthCheck implements HealthCheckPort {
       this.prisma.processingJob.count({ where: { status: 'CLAIMED' } }),
     ]);
     return { pending, claimed };
+  }
+
+  async countActiveImports(): Promise<number> {
+    return this.prisma.import.count({ where: { status: 'PROCESSING' } });
   }
 }

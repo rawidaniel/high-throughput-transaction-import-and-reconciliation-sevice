@@ -21,6 +21,7 @@ import { ReadlineLineReader } from '../infrastructure/streaming/readline-line-re
 import { ResilienceModule } from '../modules/resilience.module';
 import { SystemModule } from '../modules/system.module';
 import { JobPollerService } from '../worker/job-poller.service';
+import { WorkerMetricsServer } from './worker-metrics.server';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { JobPollerService } from '../worker/job-poller.service';
     { provide: METRICS_RECORDER, useClass: PrometheusMetricsRecorder },
     ProcessImportFileUseCase,
     JobPollerService,
+    WorkerMetricsServer,
   ],
   exports: [JobPollerService],
 })

@@ -33,12 +33,13 @@ import {
   type TransactionRepositoryPort,
 } from '../ports/transaction-repository.port';
 
+const CANCELLATION_CHECK_INTERVAL = 500;
+const BATCH_SIZE = Number(process.env.PERSIST_BATCH_SIZE ?? 500);
+
 const MAX_CONCURRENT_PERSISTS = Number(
   process.env.MAX_CONCURRENT_PERSISTS ?? 2,
 );
-const BATCH_SIZE = Number(process.env.PERSIST_BATCH_SIZE ?? 500);
 
-const CANCELLATION_CHECK_INTERVAL = 500;
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const LEASE_DURATION_MS = 2 * 60 * 1000;
 const RAW_VALUE_CAP = 2000;
@@ -46,14 +47,14 @@ const RAW_VALUE_CAP = 2000;
 @Injectable()
 export class ProcessImportFileUseCase {
   constructor(
+    @Inject(JOB_REPOSITORY) private readonly jobRepository: JobRepositoryPort,
     @Inject(IMPORT_FILE_REPOSITORY)
     private readonly importFileRepository: ImportFileRepositoryPort,
-    @Inject(JOB_REPOSITORY) private readonly jobRepository: JobRepositoryPort,
+    @Inject(TRANSACTION_REPOSITORY)
+    private readonly transactionRepository: TransactionRepositoryPort,
     @Inject(LINE_READER) private readonly lineReader: LineReaderPort,
     @Inject(RISK_SCORING_POOL)
     private readonly riskScoringPool: RiskScoringPoolPort,
-    @Inject(TRANSACTION_REPOSITORY)
-    private readonly transactionRepository: TransactionRepositoryPort,
     @Inject(RETRY_POLICY) private readonly retryPolicy: RetryPolicyPort,
     @Inject(METRICS_RECORDER) private readonly metrics: MetricsRecorderPort,
   ) {}
@@ -101,10 +102,17 @@ export class ProcessImportFileUseCase {
       pendingRejected = [];
       pendingLineCount = 0;
 
+      const scoringStart = Date.now();
       const scored =
         scoringBatch.length > 0
           ? await this.riskScoringPool.scoreBatch(scoringBatch)
           : [];
+      if (scoringBatch.length > 0) {
+        this.metrics.observeHistogram(
+          METRICS.SCORING_BATCH_DURATION,
+          (Date.now() - scoringStart) / 1000,
+        );
+      }
 
       const scoredTransactions: ScoredTransaction[] = scoringBatch.map(
         (input, i) => ({
@@ -115,6 +123,7 @@ export class ProcessImportFileUseCase {
         }),
       );
 
+      const persistStart = Date.now();
       const persistPromise = persistLimiter.run(async () => {
         const result = await this.retryPolicy.execute(
           () =>
@@ -137,6 +146,26 @@ export class ProcessImportFileUseCase {
         totals.inserted += result.insertedCount;
         totals.duplicates += result.duplicateCount;
         totals.rejected += result.rejectedCount;
+
+        this.metrics.observeHistogram(
+          METRICS.BATCH_PERSIST_DURATION,
+          (Date.now() - persistStart) / 1000,
+        );
+        this.metrics.incrementCounter(
+          METRICS.RECORDS_PROCESSED,
+          {},
+          processedDelta,
+        );
+        this.metrics.incrementCounter(
+          METRICS.RECORDS_DUPLICATE,
+          {},
+          result.duplicateCount,
+        );
+        for (const r of rejectedBatch) {
+          this.metrics.incrementCounter(METRICS.RECORDS_REJECTED, {
+            error_code: r.errorCode,
+          });
+        }
       });
 
       inFlightPersists.push(persistPromise);
@@ -200,6 +229,16 @@ export class ProcessImportFileUseCase {
         }
 
         if (pendingScoring.length + pendingRejected.length >= BATCH_SIZE) {
+          if (
+            persistLimiter.queueDepth > 0 ||
+            persistLimiter.inFlight >= MAX_CONCURRENT_PERSISTS
+          ) {
+            this.metrics.incrementCounter(METRICS.BACKPRESSURE_WAITS);
+          }
+          this.metrics.setGauge(
+            METRICS.PERSIST_QUEUE_DEPTH,
+            persistLimiter.queueDepth,
+          );
           await flush();
         }
       }
@@ -210,8 +249,14 @@ export class ProcessImportFileUseCase {
 
       if (wasCancelled) {
         await this.jobRepository.markCancelled(job.id, job.importId);
+        this.metrics.incrementCounter(METRICS.IMPORTS_COMPLETED, {
+          status: 'cancelled',
+        });
       } else {
         await this.jobRepository.markCompleted(job.id, job.importId);
+        this.metrics.incrementCounter(METRICS.IMPORTS_COMPLETED, {
+          status: 'completed',
+        });
       }
     } catch (err) {
       const message =
@@ -220,6 +265,9 @@ export class ProcessImportFileUseCase {
       await Promise.allSettled(inFlightPersists);
 
       await this.jobRepository.markFailed(job.id, job.importId, message);
+      this.metrics.incrementCounter(METRICS.IMPORTS_COMPLETED, {
+        status: 'failed',
+      });
     }
   }
 }
