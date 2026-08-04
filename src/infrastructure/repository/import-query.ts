@@ -15,7 +15,7 @@ export class ImportQuery implements ImportQueryPort {
 
   async getSummary(importId: string): Promise<ImportSummary> {
     try {
-      const [importFile, overall, byCurrency, byRiskLevel, topMerchants] =
+      const [importData, overall, byCurrency, byRiskLevel, topMerchants] =
         await Promise.all([
           this.prisma.import.findUnique({
             where: { id: importId },
@@ -57,9 +57,9 @@ export class ImportQuery implements ImportQueryPort {
         earliestTransaction: overall._min.timestamp ?? null,
         latestTransaction: overall._max.timestamp ?? null,
         totals: {
-          accepted: importFile?.acceptedCount || 0,
-          rejected: importFile?.rejectedCount || 0,
-          duplicated: importFile?.duplicateCount || 0,
+          accepted: importData?.acceptedCount || 0,
+          rejected: importData?.rejectedCount || 0,
+          duplicated: importData?.duplicateCount || 0,
         },
         byCurrency: byCurrency.map((row) => ({
           currency: row.currency,
