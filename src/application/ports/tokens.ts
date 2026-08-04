@@ -10,3 +10,4 @@ export const JOB_REPOSITORY = Symbol('JOB_REPOSITORY');
 export const LINE_READER = Symbol('LINE_READER');
 export const RISK_SCORING_POOL = Symbol('RISK_SCORING_POOL');
 export const TRANSACTION_REPOSITORY = Symbol('TRANSACTION_REPOSITORY');
+export const IMPORT_QUERY = Symbol('IMPORT_QUERY');
