@@ -5,8 +5,12 @@ import {
   CreateImportResult,
   ImportRecord,
   ImportRepositoryPort,
+  ImportStatus,
 } from '../../application/ports/import-repository.port';
-import { wrapDatabaseError } from '../../domain/domain-errors';
+import {
+  ImportNotFoundError,
+  wrapDatabaseError,
+} from '../../domain/domain-errors';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -66,6 +70,43 @@ export class ImportRepository implements ImportRepositoryPort {
       return record ? this.toDomain(record) : null;
     } catch (err) {
       throw wrapDatabaseError(err, 'ImportRepository.findById');
+    }
+  }
+
+  async requestCancellation(importId: string): Promise<ImportStatus> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const existing = await tx.import.findUnique({
+          where: { id: importId },
+          select: { status: true },
+        });
+
+        if (!existing) {
+          throw new ImportNotFoundError(importId);
+        }
+
+        if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(existing.status)) {
+          return existing.status;
+        }
+
+        if (existing.status === 'CANCELLING') {
+          return 'CANCELLING';
+        }
+
+        await tx.import.update({
+          where: { id: importId },
+          data: { status: 'CANCELLING' },
+        });
+        await tx.processingJob.updateMany({
+          where: { importId },
+          data: { status: 'CANCELLING' },
+        });
+
+        return 'CANCELLING';
+      });
+    } catch (err) {
+      if (err instanceof ImportNotFoundError) throw err;
+      throw wrapDatabaseError(err, 'ImportRepository.requestCancellation');
     }
   }
 
