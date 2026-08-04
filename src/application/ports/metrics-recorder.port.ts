@@ -27,4 +27,5 @@ export const METRICS = {
   JOB_QUEUE_DEPTH: 'job_queue_depth',
   EVENT_LOOP_DELAY_P99: 'event_loop_delay_p99_ms',
   EVENT_LOOP_UTILIZATION: 'event_loop_utilization',
+  RETRY_ATTEMPTS: 'retry_attempts_total',
 } as const;

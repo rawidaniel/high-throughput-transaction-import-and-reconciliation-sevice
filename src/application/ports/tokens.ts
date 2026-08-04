@@ -13,3 +13,4 @@ export const TRANSACTION_REPOSITORY = Symbol('TRANSACTION_REPOSITORY');
 export const IMPORT_QUERY = Symbol('IMPORT_QUERY');
 export const HEALTH_CHECK = Symbol('HEALTH_CHECK');
 export const METRICS_RECORDER = Symbol('METRICS_RECORDER');
+export const RETRY_POLICY = Symbol('RETRY_POLICY');

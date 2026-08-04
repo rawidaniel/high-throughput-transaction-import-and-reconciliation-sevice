@@ -10,6 +10,11 @@ import {
 } from '../ports/job-repository.port';
 import { type LineReaderPort } from '../ports/line-reader.port';
 import {
+  METRICS,
+  type MetricsRecorderPort,
+} from '../ports/metrics-recorder.port';
+import { type RetryPolicyPort } from '../ports/retry-policy.port';
+import {
   type RiskScoringPoolPort,
   ScoringInput,
 } from '../ports/risk-scoring-pool.port';
@@ -17,6 +22,8 @@ import {
   IMPORT_FILE_REPOSITORY,
   JOB_REPOSITORY,
   LINE_READER,
+  METRICS_RECORDER,
+  RETRY_POLICY,
   RISK_SCORING_POOL,
   TRANSACTION_REPOSITORY,
 } from '../ports/tokens';
@@ -47,6 +54,8 @@ export class ProcessImportFileUseCase {
     private readonly riskScoringPool: RiskScoringPoolPort,
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: TransactionRepositoryPort,
+    @Inject(RETRY_POLICY) private readonly retryPolicy: RetryPolicyPort,
+    @Inject(METRICS_RECORDER) private readonly metrics: MetricsRecorderPort,
   ) {}
 
   async execute(job: ClaimedJob): Promise<void> {
@@ -107,12 +116,24 @@ export class ProcessImportFileUseCase {
       );
 
       const persistPromise = persistLimiter.run(async () => {
-        const result = await this.transactionRepository.persistBatch({
-          importId: job.importId,
-          scored: scoredTransactions,
-          rejected: rejectedBatch,
-          processedDelta,
-        });
+        const result = await this.retryPolicy.execute(
+          () =>
+            this.transactionRepository.persistBatch({
+              importId: job.importId,
+              scored: scoredTransactions,
+              rejected: rejectedBatch,
+              processedDelta,
+            }),
+          {
+            operation: 'persistBatch',
+            onRetry: () => {
+              this.metrics.incrementCounter(METRICS.RETRY_ATTEMPTS, {
+                operation: 'persistBatch',
+              });
+            },
+          },
+        );
+
         totals.inserted += result.insertedCount;
         totals.duplicates += result.duplicateCount;
         totals.rejected += result.rejectedCount;
