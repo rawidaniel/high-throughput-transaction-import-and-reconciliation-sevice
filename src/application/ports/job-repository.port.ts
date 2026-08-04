@@ -37,4 +37,9 @@ export interface JobRepositoryPort {
   markCompleted(jobId: string, importId: string): Promise<void>;
   markFailed(jobId: string, importId: string, reason: string): Promise<void>;
   markCancelled(jobId: string, importId: string): Promise<void>;
+
+  releaseLease(jobId: string, workerId: string): Promise<void>;
+  reclaimExpiredLeases(
+    maxAttempts: number,
+  ): Promise<{ reset: number; failed: number }>;
 }

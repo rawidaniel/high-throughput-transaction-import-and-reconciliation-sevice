@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ShutdownState } from 'src/application/shutdown/shutdown-state';
 import {
   IMPORT_FILE_REPOSITORY,
   JOB_REPOSITORY,
@@ -41,6 +42,7 @@ import { WorkerMetricsServer } from './worker-metrics.server';
     ProcessImportFileUseCase,
     JobPollerService,
     WorkerMetricsServer,
+    ShutdownState,
   ],
   exports: [JobPollerService],
 })

@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '../../../generated/prisma/client';
+import { Prisma } from 'generated/prisma/client';
+import { wrapDatabaseError } from 'src/domain/domain-errors';
 import {
   ClaimedJob,
   JobRepositoryPort,
   JobStatus,
 } from '../../application/ports/job-repository.port';
-import { wrapDatabaseError } from '../../domain/domain-errors';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface RawClaimRow {
@@ -131,6 +131,97 @@ export class JobRepository implements JobRepositoryPort {
       { status: 'CANCELLED' },
       { status: 'CANCELLED', completedAt: new Date() },
     );
+  }
+
+  async releaseLease(jobId: string, workerId: string): Promise<void> {
+    try {
+      const released = await this.prisma.processingJob.updateMany({
+        where: {
+          id: jobId,
+          leasedBy: workerId,
+          status: { in: ['CLAIMED', 'PROCESSING'] },
+        },
+        data: { status: 'PENDING', leasedBy: null, leasedUntil: null },
+      });
+
+      if (released.count > 0) {
+        const job = await this.prisma.processingJob.findUnique({
+          where: { id: jobId },
+          select: { importId: true },
+        });
+        if (job) {
+          await this.prisma.import.updateMany({
+            where: { id: job.importId, status: 'PROCESSING' },
+            data: { status: 'PENDING' },
+          });
+        }
+      }
+    } catch (err) {
+      throw wrapDatabaseError(err, 'JobRepository.releaseLease');
+    }
+  }
+
+  async reclaimExpiredLeases(
+    maxAttempts: number,
+  ): Promise<{ reset: number; failed: number }> {
+    try {
+      const now = new Date();
+
+      const expired = await this.prisma.processingJob.findMany({
+        where: {
+          status: { in: ['CLAIMED', 'PROCESSING'] },
+          leasedUntil: { lt: now },
+        },
+        select: { id: true, importId: true, attemptCount: true },
+      });
+
+      if (expired.length === 0) {
+        return { reset: 0, failed: 0 };
+      }
+
+      const toFail = expired.filter((j) => j.attemptCount >= maxAttempts);
+      const toReset = expired.filter((j) => j.attemptCount < maxAttempts);
+
+      const failureReason =
+        'Abandoned by a crashed worker; exceeded max attempts.';
+
+      await this.prisma.$transaction(async (tx) => {
+        if (toFail.length > 0) {
+          await tx.processingJob.updateMany({
+            where: { id: { in: toFail.map((j) => j.id) } },
+            data: {
+              status: 'FAILED',
+              leasedBy: null,
+              leasedUntil: null,
+              lastError: failureReason,
+            },
+          });
+          await tx.import.updateMany({
+            where: { id: { in: toFail.map((j) => j.importId) } },
+            data: { status: 'FAILED', failureReason, completedAt: now },
+          });
+        }
+
+        if (toReset.length > 0) {
+          await tx.processingJob.updateMany({
+            where: { id: { in: toReset.map((j) => j.id) } },
+            data: { status: 'PENDING', leasedBy: null, leasedUntil: null },
+          });
+
+          await tx.import.updateMany({
+            where: {
+              id: { in: toReset.map((j) => j.importId) },
+              status: 'PROCESSING',
+            },
+            data: { status: 'PENDING' },
+          });
+        }
+      });
+
+      return { reset: toReset.length, failed: toFail.length };
+    } catch (err) {
+      throw wrapDatabaseError(err, 'JobRepository.reclaimExpiredLeases');
+    }
   }
 
   private async updateBoth(
