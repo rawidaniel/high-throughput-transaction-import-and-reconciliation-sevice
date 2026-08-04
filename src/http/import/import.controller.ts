@@ -1,5 +1,6 @@
 import { Controller, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
+import { CancelImportUseCase } from '../../application/use-cases/cancel-import.use-case';
 import { CreateImportUseCase } from '../../application/use-cases/create-import.use-case';
 import { GetImportStatusUseCase } from '../../application/use-cases/get-import-status.use-case';
 import {
@@ -17,6 +18,7 @@ export class ImportController {
   constructor(
     private readonly createImport: CreateImportUseCase,
     private readonly getImportStatus: GetImportStatusUseCase,
+    private readonly cancelImport: CancelImportUseCase,
   ) {}
 
   @Post()
@@ -59,6 +61,13 @@ export class ImportController {
   async getStatus(@Param('id') id: string): Promise<ImportStatusDto> {
     const record = await this.getImportStatus.execute(id);
     return ImportStatusDto.from(record);
+  }
+
+  @Post(':id/cancel')
+  @HttpCode(202)
+  async cancel(@Param('id') id: string) {
+    const result = await this.cancelImport.execute(id);
+    return { id, status: result.status };
   }
 
   private async readFilePart(request: FastifyRequest) {

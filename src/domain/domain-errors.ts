@@ -103,6 +103,18 @@ export class ImportNotFoundError extends DomainError {
   }
 }
 
+export class ImportAlreadyFinishedError extends DomainError {
+  readonly code = 'IMPORT_ALREADY_FINISHED';
+  readonly httpStatus = 409;
+  readonly category = ErrorCategory.BUSINESS_RULE;
+  readonly retryable = false;
+  constructor(id: string, currentStatus: string) {
+    super('This import has already finished and cannot be modified.', {
+      context: { importId: id, currentStatus },
+    });
+  }
+}
+
 export class InfrastructureError extends DomainError {
   readonly code: string;
   readonly httpStatus = 503;
