@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   ImportQueryPort,
   ImportSummary,
+  RejectedRecordPage,
 } from '../../application/ports/import-query.port';
 import { Prisma } from 'generated/prisma/client';
 import { wrapDatabaseError } from '../../domain/domain-errors';
@@ -78,6 +79,40 @@ export class ImportQuery implements ImportQueryPort {
       };
     } catch (err) {
       throw wrapDatabaseError(err, 'ImportQuery.getSummary');
+    }
+  }
+
+  async getRejectedRecords(
+    importId: string,
+    cursor: string | null,
+    limit: number,
+  ): Promise<RejectedRecordPage> {
+    try {
+      const rows = await this.prisma.rejectedRecord.findMany({
+        where: {
+          importId,
+          ...(cursor ? { id: { gt: cursor } } : {}),
+        },
+        orderBy: { id: 'asc' },
+        take: limit + 1,
+      });
+
+      const hasMore = rows.length > limit;
+      const items = hasMore ? rows.slice(0, limit) : rows;
+
+      return {
+        items: items.map((r) => ({
+          id: r.id,
+          lineNumber: r.lineNumber,
+          errorCode: r.errorCode,
+          message: r.message,
+          rawValueTruncated: r.rawValueTruncated,
+          createdAt: r.createdAt,
+        })),
+        nextCursor: hasMore ? items[items.length - 1].id : null,
+      };
+    } catch (err) {
+      throw wrapDatabaseError(err, 'ImportQuery.getRejectedRecords');
     }
   }
 }

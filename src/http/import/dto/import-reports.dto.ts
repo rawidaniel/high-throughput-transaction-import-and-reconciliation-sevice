@@ -1,4 +1,7 @@
-import { ImportSummary } from '../../../application/ports/import-query.port';
+import {
+  ImportSummary,
+  RejectedRecordPage,
+} from '../../../application/ports/import-query.port';
 
 export class ImportSummaryDto {
   static from(summary: ImportSummary) {
@@ -12,6 +15,22 @@ export class ImportSummaryDto {
       byCurrency: summary.byCurrency,
       byRiskLevel: summary.byRiskLevel,
       topMerchants: summary.topMerchants,
+    };
+  }
+}
+
+export class RejectedRecordsDto {
+  static from(page: RejectedRecordPage) {
+    return {
+      items: page.items.map((item) => ({
+        id: item.id,
+        lineNumber: item.lineNumber,
+        errorCode: item.errorCode,
+        message: item.message,
+        rawValueTruncated: item.rawValueTruncated,
+        createdAt: item.createdAt.toISOString(),
+      })),
+      nextCursor: page.nextCursor,
     };
   }
 }

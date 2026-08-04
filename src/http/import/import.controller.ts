@@ -1,16 +1,25 @@
-import { Controller, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { CancelImportUseCase } from '../../application/use-cases/cancel-import.use-case';
 import { CreateImportUseCase } from '../../application/use-cases/create-import.use-case';
 import { GetImportStatusUseCase } from '../../application/use-cases/get-import-status.use-case';
 import { GetImportSummaryUseCase } from '../../application/use-cases/get-import-summary.use-case';
+import { GetRejectedRecordsUseCase } from '../../application/use-cases/get-reject-transaction.use-case';
 import {
   InvalidRequestBodyError,
   MissingIdempotencyKeyError,
   NoFileUploadedError,
 } from '../../domain/domain-errors';
 import { CreateImportResponseDto } from './dto/create-import-response.dto';
-import { ImportSummaryDto } from './dto/import-reports.dto';
+import { ImportSummaryDto, RejectedRecordsDto } from './dto/import-reports.dto';
 import { ImportStatusDto } from './dto/import-status.dto';
 
 const EXPECTED_FIELD_NAME = 'file';
@@ -22,6 +31,7 @@ export class ImportController {
     private readonly getImportStatus: GetImportStatusUseCase,
     private readonly cancelImport: CancelImportUseCase,
     private readonly getImportSummary: GetImportSummaryUseCase,
+    private readonly getRejectedRecords: GetRejectedRecordsUseCase,
   ) {}
 
   @Post()
@@ -77,6 +87,21 @@ export class ImportController {
   async getSummary(@Param('id') id: string) {
     const summary = await this.getImportSummary.execute(id);
     return ImportSummaryDto.from(summary);
+  }
+
+  @Get(':id/rejections')
+  async getRejections(
+    @Param('id') id: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit = limit !== undefined ? Number(limit) : undefined;
+    const page = await this.getRejectedRecords.execute(
+      id,
+      cursor ?? null,
+      parsedLimit,
+    );
+    return RejectedRecordsDto.from(page);
   }
 
   private async readFilePart(request: FastifyRequest) {

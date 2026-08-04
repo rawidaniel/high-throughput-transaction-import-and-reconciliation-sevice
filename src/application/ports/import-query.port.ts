@@ -46,4 +46,9 @@ export interface RejectedRecordPage {
 
 export interface ImportQueryPort {
   getSummary(importId: string): Promise<ImportSummary>;
+  getRejectedRecords(
+    importId: string,
+    cursor: string | null,
+    limit: number,
+  ): Promise<RejectedRecordPage>;
 }
