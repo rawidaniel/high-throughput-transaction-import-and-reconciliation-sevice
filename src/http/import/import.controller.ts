@@ -6,6 +6,7 @@ import {
   Post,
   Query,
   Req,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { CancelImportUseCase } from '../../application/use-cases/cancel-import.use-case';
@@ -18,6 +19,7 @@ import {
   MissingIdempotencyKeyError,
   NoFileUploadedError,
 } from '../../domain/domain-errors';
+import { ConcurrentUploadLimitInterceptor } from '../common/interceptors/concurrent-upload-limit.interceptor';
 import { CreateImportResponseDto } from './dto/create-import-response.dto';
 import { ImportSummaryDto, RejectedRecordsDto } from './dto/import-reports.dto';
 import { ImportStatusDto } from './dto/import-status.dto';
@@ -36,7 +38,10 @@ export class ImportController {
 
   @Post()
   @HttpCode(202)
-  async Create(@Req() request: FastifyRequest) {
+  @UseInterceptors(ConcurrentUploadLimitInterceptor)
+  async create(
+    @Req() request: FastifyRequest,
+  ): Promise<CreateImportResponseDto> {
     const idempotencyKey = request.headers['idempotency-key'];
     if (!idempotencyKey || Array.isArray(idempotencyKey)) {
       throw new MissingIdempotencyKeyError();
@@ -48,6 +53,13 @@ export class ImportController {
       );
     }
 
+    const contentEncoding = request.headers['content-encoding'];
+    if (contentEncoding && contentEncoding !== 'identity') {
+      throw new InvalidRequestBodyError(
+        'Compressed uploads are not supported. Send the file uncompressed.',
+      );
+    }
+
     const part = await this.readFilePart(request);
 
     if (!part) {
@@ -56,9 +68,11 @@ export class ImportController {
 
     if (part.fieldname !== EXPECTED_FIELD_NAME) {
       throw new InvalidRequestBodyError(
-        `Expected a file field named "${EXPECTED_FIELD_NAME}", received "${part.fieldname}".`,
+        `Expected a file field named "${EXPECTED_FIELD_NAME}".`,
       );
     }
+
+    assertNotCompressedArchive(part.filename, part.mimetype);
 
     const result = await this.createImport.execute({
       idempotencyKey,
@@ -112,5 +126,29 @@ export class ImportController {
         err instanceof Error ? err.message : 'Malformed multipart request.';
       throw new InvalidRequestBodyError(message);
     }
+  }
+}
+
+function assertNotCompressedArchive(filename: string, mimeType: string): void {
+  const COMPRESSED_EXTENSIONS = /\.(gz|zip|bz2|xz|7z|rar|tar|tgz|zst|lz4|br)$/i;
+  const COMPRESSED_MIMES = new Set([
+    'application/gzip',
+    'application/x-gzip',
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/x-bzip2',
+    'application/x-xz',
+    'application/x-7z-compressed',
+    'application/x-tar',
+    'application/zstd',
+  ]);
+
+  if (
+    COMPRESSED_EXTENSIONS.test(filename ?? '') ||
+    COMPRESSED_MIMES.has(mimeType)
+  ) {
+    throw new InvalidRequestBodyError(
+      'Compressed or archive uploads are not supported. Send plain NDJSON.',
+    );
   }
 }

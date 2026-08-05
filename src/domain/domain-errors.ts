@@ -79,6 +79,18 @@ export class InvalidFileTypeError extends DomainError {
   }
 }
 
+export class TooManyConcurrentUploadsError extends DomainError {
+  readonly code = 'TOO_MANY_CONCURRENT_UPLOADS';
+  readonly httpStatus = 503;
+  readonly category = ErrorCategory.BUSINESS_RULE;
+  readonly retryable = false;
+  constructor(limit: number) {
+    super('Too many uploads in progress. Please retry shortly.', {
+      context: { limit },
+    });
+  }
+}
+
 export class FileTooLargeError extends DomainError {
   readonly code = 'IMPORT_FILE_TOO_LARGE';
   readonly httpStatus = 413;
