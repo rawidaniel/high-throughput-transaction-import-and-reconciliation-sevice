@@ -19,7 +19,7 @@
     "test:watch": "jest --config jest.config.js --watch",
     "test:cov": "jest --config jest.config.js --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --config jest.config.js --runInBand",
-    "test:integration": "jest --config jest.integration.config.js",
+    "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.integration.config.js",
     "test:all": "npm run test && npm run test:integration",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
