@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from 'generated/prisma/client';
-import { wrapDatabaseError } from 'src/domain/domain-errors';
+import { Prisma } from '../../../generated/prisma/client';
+import { wrapDatabaseError } from '../../domain/domain-errors';
 import {
   ClaimedJob,
   JobRepositoryPort,
@@ -36,7 +36,8 @@ export class JobRepository implements JobRepositoryPort {
         WHERE id = (
           SELECT id FROM processing_jobs
           WHERE status = 'PENDING'::"JobStatus"
-             OR (status = 'CLAIMED'::"JobStatus" AND "leasedUntil" < now())
+             OR (status IN ('CLAIMED'::"JobStatus", 'PROCESSING'::"JobStatus")
+                AND "leasedUntil" < now())
           ORDER BY "createdAt"
           FOR UPDATE SKIP LOCKED
           LIMIT 1
