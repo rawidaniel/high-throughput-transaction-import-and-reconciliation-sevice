@@ -1,0 +1,47 @@
+{"transactionId": "txn-0001", "accountId": "acc-2", "merchantId": "merch-2", "amount": 302.03, "currency": "EUR", "timestamp": "2026-01-15T09:17:00Z", "description": "Purchase at merchant 2"}
+{"transactionId": "txn-0002", "accountId": "acc-3", "merchantId": "merch-3", "amount": 3327.33, "currency": "GBP", "timestamp": "2026-01-15T09:34:00Z", "description": "Purchase at merchant 3"}
+{"transactionId": "txn-0003", "accountId": "acc-4", "merchantId": "merch-4", "amount": 2089.18, "currency": "JPY", "timestamp": "2026-01-15T09:51:00Z", "description": "Purchase at merchant 4"}
+{"transactionId": "txn-0004", "accountId": "acc-5", "merchantId": "merch-5", "amount": 724.12, "currency": "USD", "timestamp": "2026-01-15T10:08:00Z", "description": "Purchase at merchant 5"}
+{"transactionId": "txn-0005", "accountId": "acc-6", "merchantId": "merch-6", "amount": 271.35, "currency": "EUR", "timestamp": "2026-01-15T10:25:00Z"}
+{"transactionId":"bad-1","accountId":"acc-1" BROKEN JSON
+{"transactionId": "txn-0006", "accountId": "acc-7", "merchantId": "merch-7", "amount": 3211.0, "currency": "GBP", "timestamp": "2026-01-15T10:42:00Z", "description": "Purchase at merchant 7"}
+{"transactionId": "txn-0007", "accountId": "acc-8", "merchantId": "merch-8", "amount": 664.76, "currency": "JPY", "timestamp": "2026-01-15T10:59:00Z", "description": "Purchase at merchant 8"}
+{"transactionId": "txn-0008", "accountId": "acc-1", "merchantId": "merch-9", "amount": 3739.4, "currency": "USD", "timestamp": "2026-01-15T11:16:00Z", "description": "Purchase at merchant 9"}
+{"transactionId": "txn-0009", "accountId": "acc-2", "merchantId": "merch-10", "amount": 1612.76, "currency": "EUR", "timestamp": "2026-01-15T11:33:00Z", "description": "Purchase at merchant 10"}
+{"transactionId": "txn-0010", "accountId": "acc-3", "merchantId": "merch-11", "amount": 3374.64, "currency": "GBP", "timestamp": "2026-01-15T11:50:00Z"}
+{"transactionId": "txn-0011", "accountId": "acc-4", "merchantId": "merch-12", "amount": 4300.88, "currency": "JPY", "timestamp": "2026-01-15T12:07:00Z", "description": "Purchase at merchant 12"}
+{"transactionId": "bad-2", "accountId": "acc-1", "merchantId": "m-1", "amount": -99, "currency": "USD", "timestamp": "2026-01-15T10:00:00Z"}
+{"transactionId": "txn-0012", "accountId": "acc-5", "merchantId": "merch-1", "amount": 1886.34, "currency": "USD", "timestamp": "2026-01-15T12:24:00Z", "description": "Purchase at merchant 1"}
+{"transactionId": "txn-0013", "accountId": "acc-6", "merchantId": "merch-2", "amount": 887.24, "currency": "EUR", "timestamp": "2026-01-15T12:41:00Z", "description": "Purchase at merchant 2"}
+{"transactionId": "txn-0014", "accountId": "acc-7", "merchantId": "merch-3", "amount": 1224.23, "currency": "GBP", "timestamp": "2026-01-15T12:58:00Z", "description": "Purchase at merchant 3"}
+{"transactionId": "txn-0015", "accountId": "acc-8", "merchantId": "merch-4", "amount": 3015.22, "currency": "JPY", "timestamp": "2026-01-15T13:15:00Z"}
+{"transactionId": "txn-0016", "accountId": "acc-1", "merchantId": "merch-5", "amount": 3664.79, "currency": "USD", "timestamp": "2026-01-15T13:32:00Z", "description": "Purchase at merchant 5"}
+{"transactionId": "txn-0017", "accountId": "acc-2", "merchantId": "merch-6", "amount": 4706.44, "currency": "EUR", "timestamp": "2026-01-15T13:49:00Z", "description": "Purchase at merchant 6"}
+{"transactionId": "bad-3", "accountId": "acc-1", "merchantId": "m-1", "amount": 50, "currency": "DOLLARS", "timestamp": "2026-01-15T10:00:00Z"}
+{"transactionId": "txn-0018", "accountId": "acc-3", "merchantId": "merch-7", "amount": 2718.19, "currency": "GBP", "timestamp": "2026-01-15T14:06:00Z", "description": "Purchase at merchant 7"}
+{"transactionId": "txn-0019", "accountId": "acc-4", "merchantId": "merch-8", "amount": 3285.39, "currency": "JPY", "timestamp": "2026-01-15T14:23:00Z", "description": "Purchase at merchant 8"}
+{"transactionId": "txn-0020", "accountId": "acc-5", "merchantId": "merch-9", "amount": 2616.25, "currency": "USD", "timestamp": "2026-01-15T14:40:00Z"}
+{"transactionId": "txn-0021", "accountId": "acc-6", "merchantId": "merch-10", "amount": 4667.31, "currency": "EUR", "timestamp": "2026-01-15T14:57:00Z", "description": "Purchase at merchant 10"}
+{"transactionId": "txn-0022", "accountId": "acc-7", "merchantId": "merch-11", "amount": 4385.56, "currency": "GBP", "timestamp": "2026-01-15T15:14:00Z", "description": "Purchase at merchant 11"}
+{"transactionId": "txn-0023", "accountId": "acc-8", "merchantId": "merch-12", "amount": 4565.9, "currency": "JPY", "timestamp": "2026-01-15T15:31:00Z", "description": "Purchase at merchant 12"}
+{"transactionId": "bad-4", "accountId": "acc-1", "merchantId": "m-1", "amount": 50, "currency": "USD", "timestamp": "not-a-real-date"}
+{"transactionId": "txn-0024", "accountId": "acc-1", "merchantId": "merch-1", "amount": 4627.5, "currency": "USD", "timestamp": "2026-01-15T15:48:00Z", "description": "Purchase at merchant 1"}
+{"transactionId": "txn-0025", "accountId": "acc-2", "merchantId": "merch-2", "amount": 2744.35, "currency": "EUR", "timestamp": "2026-01-15T16:05:00Z"}
+{"transactionId": "txn-0026", "accountId": "acc-3", "merchantId": "merch-3", "amount": 3433.37, "currency": "GBP", "timestamp": "2026-01-15T16:22:00Z", "description": "Purchase at merchant 3"}
+{"transactionId": "txn-0027", "accountId": "acc-4", "merchantId": "merch-4", "amount": 528.85, "currency": "JPY", "timestamp": "2026-01-15T16:39:00Z", "description": "Purchase at merchant 4"}
+{"transactionId": "txn-0028", "accountId": "acc-5", "merchantId": "merch-5", "amount": 2944.87, "currency": "USD", "timestamp": "2026-01-15T16:56:00Z", "description": "Purchase at merchant 5"}
+{"transactionId": "txn-0029", "accountId": "acc-6", "merchantId": "merch-6", "amount": 2781.69, "currency": "EUR", "timestamp": "2026-01-15T17:13:00Z", "description": "Purchase at merchant 6"}
+{"accountId": "acc-1", "merchantId": "m-1"}
+{"transactionId": "txn-0030", "accountId": "acc-7", "merchantId": "merch-7", "amount": 4469.6, "currency": "GBP", "timestamp": "2026-01-15T17:30:00Z"}
+{"transactionId": "txn-0031", "accountId": "acc-8", "merchantId": "merch-8", "amount": 2659.74, "currency": "JPY", "timestamp": "2026-01-15T17:47:00Z", "description": "Purchase at merchant 8"}
+{"transactionId": "txn-0032", "accountId": "acc-1", "merchantId": "merch-9", "amount": 2839.19, "currency": "USD", "timestamp": "2026-01-15T18:04:00Z", "description": "Purchase at merchant 9"}
+{"transactionId": "txn-0033", "accountId": "acc-2", "merchantId": "merch-10", "amount": 1430.91, "currency": "EUR", "timestamp": "2026-01-15T18:21:00Z", "description": "Purchase at merchant 10"}
+
+{"transactionId": "txn-0034", "accountId": "acc-3", "merchantId": "merch-11", "amount": 4232.54, "currency": "GBP", "timestamp": "2026-01-15T18:38:00Z", "description": "Purchase at merchant 11"}
+{"transactionId": "txn-0035", "accountId": "acc-4", "merchantId": "merch-12", "amount": 1667.15, "currency": "JPY", "timestamp": "2026-01-15T18:55:00Z"}
+{"transactionId": "txn-0036", "accountId": "acc-5", "merchantId": "merch-1", "amount": 2601.76, "currency": "USD", "timestamp": "2026-01-15T19:12:00Z", "description": "Purchase at merchant 1"}
+{"transactionId": "txn-0037", "accountId": "acc-6", "merchantId": "merch-2", "amount": 2823.11, "currency": "EUR", "timestamp": "2026-01-15T19:29:00Z", "description": "Purchase at merchant 2"}
+{"transactionId": "txn-0038", "accountId": "acc-7", "merchantId": "merch-3", "amount": 3165.27, "currency": "GBP", "timestamp": "2026-01-15T19:46:00Z", "description": "Purchase at merchant 3"}
+{"transactionId": "txn-0039", "accountId": "acc-8", "merchantId": "merch-4", "amount": 1402.24, "currency": "JPY", "timestamp": "2026-01-15T20:03:00Z", "description": "Purchase at merchant 4"}
+{"transactionId": "txn-0040", "accountId": "acc-1", "merchantId": "merch-5", "amount": 4378.77, "currency": "USD", "timestamp": "2026-01-15T20:20:00Z"}
+{"transactionId": "txn-0001", "accountId": "acc-2", "merchantId": "merch-2", "amount": 302.03, "currency": "EUR", "timestamp": "2026-01-15T09:17:00Z", "description": "Purchase at merchant 2"}
