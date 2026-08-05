@@ -1,6 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { DomainError } from '../../domain/domain-errors';
+import { DomainError } from '../../../domain/domain-errors';
 
 @Catch()
 export class AppExceptionFilter implements ExceptionFilter {
