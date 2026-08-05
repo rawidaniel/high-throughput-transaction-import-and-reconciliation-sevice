@@ -1,8 +1,8 @@
 import {
   computeFingerprint,
   FINGERPRINT_VERSION,
-} from '../../../../src/domain/transaction/compute-fingerprint';
-import { ValidatedTransaction } from '../../../../src/domain/transaction/transaction.entity';
+} from '../../../src/domain/transaction/compute-fingerprint';
+import { ValidatedTransaction } from '../../../src/domain/transaction/transaction.entity';
 
 function txn(
   overrides: Partial<ValidatedTransaction> = {},

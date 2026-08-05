@@ -1,5 +1,5 @@
-import { computeRiskScore } from '../../../../src/domain/risk/compute-risk-score';
-import { ValidatedTransaction } from '../../../../src/domain/transaction/transaction.entity';
+import { computeRiskScore } from '../../../src/domain/risk/compute-risk-score';
+import { ValidatedTransaction } from '../../../src/domain/transaction/transaction.entity';
 
 function txn(
   overrides: Partial<ValidatedTransaction> = {},

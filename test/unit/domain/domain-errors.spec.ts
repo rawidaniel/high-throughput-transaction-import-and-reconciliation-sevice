@@ -4,7 +4,7 @@ import {
   ImportNotFoundError,
   InvalidFileTypeError,
   wrapDatabaseError,
-} from '../../../../src/domain/domain-errors';
+} from '../../../src/domain/domain-errors';
 
 describe('DomainError (unit)', () => {
   it('exposes only code/message/requestId in the safe response — never context or cause', () => {
