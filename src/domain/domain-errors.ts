@@ -139,6 +139,16 @@ export class ImportAlreadyFinishedError extends DomainError {
   }
 }
 
+export class ImportCancelledError extends DomainError {
+  readonly code = 'IMPORT_CANCELLED';
+  readonly httpStatus = 409;
+  readonly category = ErrorCategory.CANCELLATION;
+  readonly retryable = false;
+  constructor(id: string) {
+    super('This import was cancelled.', { context: { importId: id } });
+  }
+}
+
 export class InfrastructureError extends DomainError {
   readonly code: string;
   readonly httpStatus = 503;
