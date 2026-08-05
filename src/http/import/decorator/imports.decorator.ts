@@ -17,7 +17,7 @@ import {
   ImportStatusDto,
   ImportSummaryDto,
   RejectedRecordsPageDto,
-} from '../dto/swagger.dto';
+} from '../dto/import.dto';
 
 const ImportIdParam = () =>
   ApiParam({

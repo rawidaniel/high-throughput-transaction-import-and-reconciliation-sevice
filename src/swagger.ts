@@ -76,7 +76,7 @@ export function setupSwagger(app: INestApplication): void {
       persistAuthorization: true,
       displayRequestDuration: true,
       docExpansion: 'list',
-      filter: true,
+      //   filter: true,
       tryItOutEnabled: true,
     },
   });
