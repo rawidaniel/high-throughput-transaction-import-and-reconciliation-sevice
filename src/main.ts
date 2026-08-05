@@ -7,8 +7,11 @@ import {
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { AppModule } from './app.module';
+import { LoggerPort } from './application/ports/logger.port';
+import { LOGGER } from './application/ports/tokens';
 import { ShutdownState } from './application/shutdown/shutdown-state';
 import { registerGracefulShutdown } from './shutdown/graceful-shutdown';
+import { setupSwagger } from './swagger';
 
 const SHUTDOWN_GRACE_MS = Number(process.env.SHUTDOWN_GRACE_MS ?? 15_000);
 
@@ -31,16 +34,18 @@ async function bootstrap() {
   });
 
   app.enableShutdownHooks();
+  setupSwagger(app);
 
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 
+  const logger = app.get<LoggerPort>(LOGGER);
   const shutdownState = app.get(ShutdownState);
 
   registerGracefulShutdown({
     processName: 'api',
     graceMs: SHUTDOWN_GRACE_MS,
     context: app,
-    // logger,
+    logger,
     shutdownState,
     steps: [
       {

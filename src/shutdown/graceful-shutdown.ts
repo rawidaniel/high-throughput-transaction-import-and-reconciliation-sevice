@@ -1,5 +1,5 @@
 import { INestApplicationContext } from '@nestjs/common';
-// import { LoggerPort } from '../application/ports/logger.port';
+import { LoggerPort } from 'src/application/ports/logger.port';
 import { ShutdownState } from '../application/shutdown/shutdown-state';
 
 export interface ShutdownStep {
@@ -12,28 +12,30 @@ export interface GracefulShutdownOptions {
   graceMs: number;
   steps: ShutdownStep[];
   context: INestApplicationContext;
-  //   logger: LoggerPort;
+  logger: LoggerPort;
   shutdownState: ShutdownState;
 }
 
 export function registerGracefulShutdown(
   options: GracefulShutdownOptions,
 ): void {
-  const { processName, graceMs, steps, context, shutdownState } = options;
+  const { processName, graceMs, steps, context, logger, shutdownState } =
+    options;
   let handling = false;
 
   const shutdown = async (signal: string): Promise<void> => {
     if (handling) {
-      console.log(
+      logger.warn(
         `${processName}: second ${signal} received — exiting immediately`,
         {},
       );
+
       process.exit(1);
     }
     handling = true;
 
     shutdownState.begin();
-    console.log(
+    logger.info(
       `${processName}: ${signal} received, shutting down gracefully`,
       { graceMs },
     );
@@ -41,7 +43,7 @@ export function registerGracefulShutdown(
     let currentStep = 'starting';
 
     const forceExit = setTimeout(() => {
-      console.error(
+      logger.error(
         `${processName}: GRACE PERIOD EXCEEDED — forcing exit. ` +
           `Step "${currentStep}" did not complete within ${graceMs}ms. ` +
           `In-flight work may be incomplete; leases will be reclaimed on next worker start.`,
@@ -59,7 +61,7 @@ export function registerGracefulShutdown(
         currentStep = step.name;
         const started = Date.now();
         await step.run();
-        console.log(`${processName}: shutdown step complete`, {
+        logger.info(`${processName}: shutdown step complete`, {
           step: step.name,
           durationMs: Date.now() - started,
         });
@@ -69,13 +71,13 @@ export function registerGracefulShutdown(
       await context.close();
 
       clearTimeout(forceExit);
-      console.log(`${processName}: shutdown complete`, {
+      logger.info(`${processName}: shutdown complete`, {
         totalMs: shutdownState.elapsedMs,
       });
       process.exit(0);
     } catch (err) {
       clearTimeout(forceExit);
-      console.error(`${processName}: error during shutdown`, {
+      logger.error(`${processName}: error during shutdown`, {
         step: currentStep,
         error: err instanceof Error ? err.message : String(err),
       });
@@ -87,7 +89,7 @@ export function registerGracefulShutdown(
   process.on('SIGINT', () => void shutdown('SIGINT'));
 
   process.on('unhandledRejection', (reason) => {
-    console.error(`${processName}: unhandled promise rejection`, {
+    logger.error(`${processName}: unhandled promise rejection`, {
       reason: reason instanceof Error ? reason.message : String(reason),
     });
   });

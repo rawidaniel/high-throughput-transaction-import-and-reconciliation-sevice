@@ -1,7 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import 'dotenv/config';
+import { LoggerPort } from './application/ports/logger.port';
 import { RiskScoringPoolPort } from './application/ports/risk-scoring-pool.port';
-import { RISK_SCORING_POOL } from './application/ports/tokens';
+import { LOGGER, RISK_SCORING_POOL } from './application/ports/tokens';
 import { ShutdownState } from './application/shutdown/shutdown-state';
 import { registerGracefulShutdown } from './shutdown/graceful-shutdown';
 import { JobPollerService } from './worker/job-poller.service';
@@ -17,13 +18,14 @@ async function bootstrap() {
 
   const poller = appContext.get(JobPollerService);
   const scoringPool = appContext.get<RiskScoringPoolPort>(RISK_SCORING_POOL);
+  const logger = appContext.get<LoggerPort>(LOGGER);
   const shutdownState = appContext.get(ShutdownState);
 
   registerGracefulShutdown({
     processName: 'worker',
     graceMs: SHUTDOWN_GRACE_MS,
     context: appContext,
-    // logger,
+    logger,
     shutdownState,
     steps: [
       {
