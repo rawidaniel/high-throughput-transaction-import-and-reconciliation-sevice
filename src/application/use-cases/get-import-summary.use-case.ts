@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ImportNotFoundError } from 'src/domain/domain-errors';
+import { ImportNotFoundError } from '../../domain/domain-errors';
 import {
   ImportSummary,
   type ImportQueryPort,

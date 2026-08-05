@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ImportAlreadyFinishedError } from 'src/domain/domain-errors';
+import { ImportAlreadyFinishedError } from '../../domain/domain-errors';
 import {
   type ImportRepositoryPort,
   ImportStatus,
