@@ -15,7 +15,6 @@ export abstract class DomainError extends Error {
   abstract readonly code: string;
   abstract readonly httpStatus: number;
   abstract readonly category: ErrorCategory;
-
   abstract readonly retryable: boolean;
 
   readonly context?: Record<string, unknown>;
@@ -48,6 +47,18 @@ export class MissingIdempotencyKeyError extends DomainError {
   }
 }
 
+export class InvalidFileTypeError extends DomainError {
+  readonly code = 'INVALID_FILE_TYPE';
+  readonly httpStatus = 400;
+  readonly category = ErrorCategory.REQUEST_VALIDATION;
+  readonly retryable = false;
+  constructor(received: string) {
+    super('Unsupported file type. Allowed: .ndjson, .jsonl, .json', {
+      context: { received },
+    });
+  }
+}
+
 export class InvalidRequestBodyError extends DomainError {
   readonly code = 'INVALID_REQUEST_BODY';
   readonly httpStatus = 400;
@@ -57,6 +68,7 @@ export class InvalidRequestBodyError extends DomainError {
     super(reason);
   }
 }
+
 export class NoFileUploadedError extends DomainError {
   readonly code = 'NO_FILE_UPLOADED';
   readonly httpStatus = 400;
@@ -67,14 +79,14 @@ export class NoFileUploadedError extends DomainError {
   }
 }
 
-export class InvalidFileTypeError extends DomainError {
-  readonly code = 'INVALID_FILE_TYPE';
-  readonly httpStatus = 400;
-  readonly category = ErrorCategory.REQUEST_VALIDATION;
+export class ShutdownInterruptedError extends DomainError {
+  readonly code = 'SHUTDOWN_INTERRUPTED';
+  readonly httpStatus = 503;
+  readonly category = ErrorCategory.CANCELLATION;
   readonly retryable = false;
-  constructor(received: string) {
-    super('Unsupported file type. Allowed: .ndjson, .jsonl, .json', {
-      context: { received }, // internal only — not interpolated into the client-facing message
+  constructor(component: string) {
+    super('Operation interrupted because the process is shutting down.', {
+      context: { component },
     });
   }
 }

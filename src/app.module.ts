@@ -7,6 +7,8 @@ import { AppExceptionFilter } from './http/common/filters/app-exception.filter';
 import HealthModule from './http/health/health.module';
 import ImportModule from './http/import/import.module';
 import { ShutdownModule } from './modules/shutdown.module';
+import { LOGGER } from './application/ports/tokens';
+import { PinoLogger } from './infrastructure/system/pino-logger';
 
 @Module({
   imports: [
@@ -19,6 +21,7 @@ import { ShutdownModule } from './modules/shutdown.module';
   providers: [
     AppService,
     { provide: APP_FILTER, useClass: AppExceptionFilter },
+    { provide: LOGGER, useClass: PinoLogger },
   ],
 })
 export class AppModule {}

@@ -11,11 +11,13 @@ import {
   ImportRecord,
   type ImportRepositoryPort,
 } from '../ports/import-repository.port';
+import { type LoggerPort } from '../ports/logger.port';
 import {
   CLOCK,
   FILE_STORAGE,
   ID_GENERATOR,
   IMPORT_REPOSITORY,
+  LOGGER,
 } from '../ports/tokens';
 
 const ALLOWED_EXTENSIONS = new Set(['.ndjson', '.jsonl', '.json']);
@@ -48,6 +50,7 @@ export class CreateImportUseCase {
     private readonly importRepository: ImportRepositoryPort,
     @Inject(CLOCK) private readonly clock: ClockPort,
     @Inject(ID_GENERATOR) private readonly idGenerator: IdGeneratorPort,
+    @Inject(LOGGER) private readonly logger: LoggerPort,
   ) {}
 
   async execute(command: CreateImportCommand): Promise<CreateImportResult> {
@@ -63,6 +66,10 @@ export class CreateImportUseCase {
       extension,
       MAX_UPLOAD_BYTES,
     );
+    this.logger.info('File streamed to storage', {
+      storagePath: savedFile.storagePath,
+      size: savedFile.size,
+    });
 
     const result = await this.importRepository.createOrReturnExisting({
       id: this.idGenerator.generate(),
@@ -72,6 +79,13 @@ export class CreateImportUseCase {
     });
 
     if (!result.isNew) {
+      this.logger.info(
+        'Idempotent replay detected, discarding duplicate upload',
+        {
+          idempotencyKey: command.idempotencyKey,
+          existingImportId: result.importRecord.id,
+        },
+      );
       await this.fileStorage.delete(savedFile.storagePath);
     }
 

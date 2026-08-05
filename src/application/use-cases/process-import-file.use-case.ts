@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ShutdownInterruptedError } from '../../domain/domain-errors';
 import { computeFingerprint } from '../../domain/transaction/compute-fingerprint';
 import { parseNdjsonLine } from '../../domain/transaction/parse-ndjson-line';
 import { validateTransaction } from '../../domain/transaction/validate-transaction';
@@ -9,6 +10,7 @@ import {
   type JobRepositoryPort,
 } from '../ports/job-repository.port';
 import { type LineReaderPort } from '../ports/line-reader.port';
+import { type LoggerPort } from '../ports/logger.port';
 import {
   METRICS,
   type MetricsRecorderPort,
@@ -22,6 +24,7 @@ import {
   IMPORT_FILE_REPOSITORY,
   JOB_REPOSITORY,
   LINE_READER,
+  LOGGER,
   METRICS_RECORDER,
   RETRY_POLICY,
   RISK_SCORING_POOL,
@@ -57,6 +60,7 @@ export class ProcessImportFileUseCase {
     private readonly riskScoringPool: RiskScoringPoolPort,
     @Inject(RETRY_POLICY) private readonly retryPolicy: RetryPolicyPort,
     @Inject(METRICS_RECORDER) private readonly metrics: MetricsRecorderPort,
+    @Inject(LOGGER) private readonly logger: LoggerPort,
   ) {}
 
   async execute(job: ClaimedJob): Promise<void> {
@@ -135,10 +139,20 @@ export class ProcessImportFileUseCase {
             }),
           {
             operation: 'persistBatch',
-            onRetry: () => {
+            onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
               this.metrics.incrementCounter(METRICS.RETRY_ATTEMPTS, {
                 operation: 'persistBatch',
               });
+              this.logger.warn(
+                'Retrying batch persistence after transient failure',
+                {
+                  importId: job.importId,
+                  attempt,
+                  maxAttempts,
+                  delayMs,
+                  error: error instanceof Error ? error.message : String(error),
+                },
+              );
             },
           },
         );
@@ -258,12 +272,38 @@ export class ProcessImportFileUseCase {
           status: 'completed',
         });
       }
+
+      this.logger.info('Finished processing import file', {
+        importId: job.importId,
+        totalLines: lineNumber,
+        inserted: totals.inserted,
+        duplicates: totals.duplicates,
+        rejected: totals.rejected,
+        cancelled: wasCancelled,
+      });
     } catch (err) {
+      await Promise.allSettled(inFlightPersists);
+
+      if (err instanceof ShutdownInterruptedError) {
+        this.logger.info(
+          'Processing interrupted by shutdown; job will be retried',
+          {
+            importId: job.importId,
+            lineNumber,
+            processedBeforeInterrupt: totals.inserted,
+          },
+        );
+        throw err;
+      }
+
       const message =
         err instanceof Error ? err.message : 'Unknown processing error.';
 
-      await Promise.allSettled(inFlightPersists);
-
+      this.logger.error('Unexpected error while processing import file', {
+        importId: job.importId,
+        lineNumber,
+        error: message,
+      });
       await this.jobRepository.markFailed(job.id, job.importId, message);
       this.metrics.incrementCounter(METRICS.IMPORTS_COMPLETED, {
         status: 'failed',

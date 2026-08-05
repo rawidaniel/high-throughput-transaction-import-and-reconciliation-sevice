@@ -5,6 +5,7 @@ import {
   IMPORT_FILE_REPOSITORY,
   JOB_REPOSITORY,
   LINE_READER,
+  LOGGER,
   METRICS_RECORDER,
   RETRY_POLICY,
   RISK_SCORING_POOL,
@@ -19,6 +20,7 @@ import { JobRepository } from '../infrastructure/repository/job.repository';
 import { TransactionRepository } from '../infrastructure/repository/transaction.repository';
 import { ExponentialBackoffRetryPolicy } from '../infrastructure/resilience/exponential-backoff-retry.policy';
 import { ReadlineLineReader } from '../infrastructure/streaming/readline-line-reader';
+import { PinoLogger } from '../infrastructure/system/pino-logger';
 import { ResilienceModule } from '../modules/resilience.module';
 import { SystemModule } from '../modules/system.module';
 import { JobPollerService } from '../worker/job-poller.service';
@@ -39,6 +41,7 @@ import { WorkerMetricsServer } from './worker-metrics.server';
     { provide: RISK_SCORING_POOL, useClass: WorkerThreadPool },
     { provide: RETRY_POLICY, useClass: ExponentialBackoffRetryPolicy },
     { provide: METRICS_RECORDER, useClass: PrometheusMetricsRecorder },
+    { provide: LOGGER, useClass: PinoLogger },
     ProcessImportFileUseCase,
     JobPollerService,
     WorkerMetricsServer,

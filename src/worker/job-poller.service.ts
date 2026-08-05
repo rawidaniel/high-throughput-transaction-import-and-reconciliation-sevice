@@ -4,9 +4,11 @@ import {
   ClaimedJob,
   type JobRepositoryPort,
 } from '../application/ports/job-repository.port';
-import { JOB_REPOSITORY } from '../application/ports/tokens';
+import { type LoggerPort } from '../application/ports/logger.port';
+import { JOB_REPOSITORY, LOGGER } from '../application/ports/tokens';
 import { ShutdownState } from '../application/shutdown/shutdown-state';
 import { ProcessImportFileUseCase } from '../application/use-cases/process-import-file.use-case';
+import { ShutdownInterruptedError } from '../domain/domain-errors';
 
 const POLL_INTERVAL_MS = 2000;
 const LEASE_DURATION_MS = Number(
@@ -19,6 +21,7 @@ const RECLAIM_INTERVAL_MS = Number(process.env.RECLAIM_INTERVAL_MS ?? 30_000);
 export class JobPollerService implements OnModuleInit {
   private readonly workerId = `worker-${randomUUID()}`;
   private polling = false;
+  z;
   private loopPromise: Promise<void> | null = null;
 
   private currentJob: ClaimedJob | null = null;
@@ -28,6 +31,7 @@ export class JobPollerService implements OnModuleInit {
     @Inject(JOB_REPOSITORY) private readonly jobRepository: JobRepositoryPort,
     private readonly processImportFile: ProcessImportFileUseCase,
     private readonly shutdownState: ShutdownState,
+    @Inject(LOGGER) private readonly logger: LoggerPort,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -39,7 +43,7 @@ export class JobPollerService implements OnModuleInit {
       const { reset, failed } =
         await this.jobRepository.reclaimExpiredLeases(MAX_JOB_ATTEMPTS);
       if (reset > 0 || failed > 0) {
-        console.warn('Reclaimed jobs abandoned by crashed workers', {
+        this.logger.warn('Reclaimed jobs abandoned by crashed workers', {
           trigger,
           resetToPending: reset,
           markedFailed: failed,
@@ -47,7 +51,7 @@ export class JobPollerService implements OnModuleInit {
         });
       }
     } catch (err) {
-      console.error(
+      this.logger.error(
         'LEASE RECLAIM FAILED — jobs from crashed workers may stay stuck until this is fixed',
         {
           trigger,
@@ -60,7 +64,7 @@ export class JobPollerService implements OnModuleInit {
   start(): void {
     if (this.polling) return;
     this.polling = true;
-    console.log('Worker poller starting', { workerId: this.workerId });
+    this.logger.info('Worker poller starting', { workerId: this.workerId });
     this.loopPromise = this.loop();
   }
 
@@ -69,7 +73,7 @@ export class JobPollerService implements OnModuleInit {
     await this.loopPromise;
 
     if (this.currentJob) {
-      console.warn('Releasing lease on unfinished job during shutdown', {
+      this.logger.warn('Releasing lease on unfinished job during shutdown', {
         jobId: this.currentJob.id,
         importId: this.currentJob.importId,
         workerId: this.workerId,
@@ -80,7 +84,7 @@ export class JobPollerService implements OnModuleInit {
           this.workerId,
         );
       } catch (err) {
-        console.error(
+        this.logger.error(
           'Failed to release lease during shutdown; it will expire naturally',
           {
             jobId: this.currentJob.id,
@@ -91,7 +95,7 @@ export class JobPollerService implements OnModuleInit {
       this.currentJob = null;
     }
 
-    console.info('Worker poller stopped', { workerId: this.workerId });
+    this.logger.info('Worker poller stopped', { workerId: this.workerId });
   }
 
   private async loop(): Promise<void> {
@@ -104,7 +108,7 @@ export class JobPollerService implements OnModuleInit {
           LEASE_DURATION_MS,
         );
       } catch (err) {
-        console.error('Failed to claim next job; retrying after interval', {
+        this.logger.error('Failed to claim next job; retrying after interval', {
           error: err instanceof Error ? err.message : String(err),
         });
         await this.sleep(POLL_INTERVAL_MS);
@@ -121,7 +125,7 @@ export class JobPollerService implements OnModuleInit {
       }
 
       this.currentJob = job;
-      console.log('Claimed job', {
+      this.logger.info('Claimed job', {
         jobId: job.id,
         importId: job.importId,
         attempt: job.attemptCount,
@@ -133,7 +137,18 @@ export class JobPollerService implements OnModuleInit {
 
         this.currentJob = null;
       } catch (err) {
-        console.error('Unexpected error escaped job processing', {
+        if (err instanceof ShutdownInterruptedError) {
+          this.logger.info(
+            'Job interrupted by shutdown; lease will be released',
+            {
+              jobId: job.id,
+              importId: job.importId,
+            },
+          );
+          break;
+        }
+
+        this.logger.error('Unexpected error escaped job processing', {
           jobId: job.id,
           error: err instanceof Error ? err.message : String(err),
         });

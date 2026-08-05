@@ -5,8 +5,9 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { createServer, Server } from 'node:http';
-import { METRICS_RECORDER } from '../application/ports/tokens';
+import { LOGGER, METRICS_RECORDER } from '../application/ports/tokens';
 import { type MetricsRecorderPort } from '../application/ports/metrics-recorder.port';
+import { type LoggerPort } from 'src/application/ports/logger.port';
 
 const PORT = Number(process.env.WORKER_METRICS_PORT ?? 3001);
 
@@ -18,13 +19,16 @@ export class WorkerMetricsServer
 
   constructor(
     @Inject(METRICS_RECORDER) private readonly metrics: MetricsRecorderPort,
+    @Inject(LOGGER) private readonly logger: LoggerPort,
   ) {}
 
   onModuleInit(): void {
     this.server = createServer((req, res) => {
       void this.handle(req.url ?? '/', res);
     });
-    this.server.listen(PORT, () => {});
+    this.server.listen(PORT, () => {
+      this.logger.info('Worker metrics endpoint listening', { port: PORT });
+    });
   }
 
   async onApplicationShutdown(): Promise<void> {
