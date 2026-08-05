@@ -11,7 +11,7 @@ function txn(
     merchantId: 'merch-1',
     amount: 100,
     currency: 'USD',
-    timestamp: new Date('2026-01-15T14:00:00Z'), // mid-afternoon
+    timestamp: new Date('2026-01-15T14:00:00Z'),
     description: 'Regular coffee shop purchase downtown',
     ...overrides,
   };
