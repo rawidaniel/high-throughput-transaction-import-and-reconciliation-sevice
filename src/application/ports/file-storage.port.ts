@@ -14,4 +14,5 @@ export interface FileStoragePort {
   ): Promise<SavedFile>;
 
   delete(storagePath: string): Promise<void>;
+  cleanupOrphans(referencedPaths: Set<string>): Promise<number>;
 }

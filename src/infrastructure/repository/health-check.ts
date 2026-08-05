@@ -26,4 +26,10 @@ export class HealthCheck implements HealthCheckPort {
   async countActiveImports(): Promise<number> {
     return this.prisma.import.count({ where: { status: 'PROCESSING' } });
   }
+  async listReferencedStoragePaths(): Promise<Set<string>> {
+    const files = await this.prisma.importFile.findMany({
+      select: { storagePath: true },
+    });
+    return new Set(files.map((f) => f.storagePath));
+  }
 }
