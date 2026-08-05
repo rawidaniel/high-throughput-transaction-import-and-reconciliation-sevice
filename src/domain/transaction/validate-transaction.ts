@@ -39,7 +39,6 @@ export function validateTransaction(
 
   const record = raw as Record<string, unknown>;
 
-  // TODO: Consider validating the provider field against a list of known providers.
   const provider = normalizeRequiredString(record.provider) ?? fallbackProvider;
   // if (!provider) {
   //   return fail(
@@ -110,7 +109,7 @@ export function validateTransaction(
         'description',
       );
     }
-    const trimmed = record.description.trim();
+    const trimmed = record.description.replace(CONTROL_CHARS, '').trim();
     if (trimmed.length > MAX_DESCRIPTION_LENGTH) {
       return fail(
         'DESCRIPTION_TOO_LONG',
@@ -136,10 +135,16 @@ export function validateTransaction(
   };
 }
 
+const MAX_IDENTIFIER_LENGTH = 128;
+
+const CONTROL_CHARS = new RegExp(`[\\u0000-\\u001f\\u007f-\\u009f]`, 'g');
+
 function normalizeRequiredString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+  const cleaned = value.replace(CONTROL_CHARS, '').trim();
+  if (cleaned.length === 0) return null;
+  if (cleaned.length > MAX_IDENTIFIER_LENGTH) return null;
+  return cleaned;
 }
 
 function normalizeAmount(value: unknown): number | null {
