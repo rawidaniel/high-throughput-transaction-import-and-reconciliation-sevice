@@ -19,18 +19,6 @@ import {
   RejectedRecordsPageDto,
 } from '../dto/swagger.dto';
 
-/**
- * Swagger documentation, composed one decorator per endpoint.
- *
- * Kept in a separate file from the controller deliberately: API
- * documentation is a large, slow-changing concern that would otherwise bury
- * the (deliberately thin) request-handling logic. The controller reads as
- * five short methods; the prose lives here.
- */
-
-// ── Shared building blocks ────────────────────────────────────
-
-/** Applied to every endpoint that takes an :id path parameter. */
 const ImportIdParam = () =>
   ApiParam({
     name: 'id',
@@ -39,15 +27,12 @@ const ImportIdParam = () =>
     example: 'a1a16868-10a8-4fa9-bf30-d7e5cfa733d9',
   });
 
-/** Every :id endpoint can 404 the same way — declare it once. */
 const ImportNotFoundResponse = () =>
   ApiResponse({
     status: 404,
     description: 'IMPORT_NOT_FOUND',
     type: ErrorResponseDto,
   });
-
-// ── POST /v1/imports ──────────────────────────────────────────
 
 export function ApiCreateImport() {
   return applyDecorators(
@@ -110,8 +95,6 @@ server-generated UUID.
   );
 }
 
-// ── GET /v1/imports/:id ───────────────────────────────────────
-
 export function ApiGetImportStatus() {
   return applyDecorators(
     ApiOperation({
@@ -127,8 +110,6 @@ export function ApiGetImportStatus() {
     ImportNotFoundResponse(),
   );
 }
-
-// ── POST /v1/imports/:id/cancel ───────────────────────────────
 
 export function ApiCancelImport() {
   return applyDecorators(
@@ -156,8 +137,6 @@ idempotent.
   );
 }
 
-// ── GET /v1/imports/:id/summary ───────────────────────────────
-
 export function ApiGetImportSummary() {
   return applyDecorators(
     ApiOperation({
@@ -172,8 +151,6 @@ export function ApiGetImportSummary() {
     ImportNotFoundResponse(),
   );
 }
-
-// ── GET /v1/imports/:id/rejections ────────────────────────────
 
 export function ApiGetRejections() {
   return applyDecorators(

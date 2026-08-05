@@ -7,6 +7,12 @@ import {
 } from '../../application/ports/metrics-recorder.port';
 import { HEALTH_CHECK, METRICS_RECORDER } from '../../application/ports/tokens';
 import { EventLoopMonitor } from '../../infrastructure/observability/event-loop-monitor';
+import {
+  ApiEventLoop,
+  ApiLiveness,
+  ApiMetrics,
+  ApiReadiness,
+} from './decorator/health.decorator';
 
 @Controller()
 export class HealthController {
@@ -17,11 +23,13 @@ export class HealthController {
   ) {}
 
   @Get('health/live')
+  @ApiLiveness()
   live() {
     return { status: 'ok', uptimeSeconds: Math.floor(process.uptime()) };
   }
 
   @Get('health/ready')
+  @ApiReadiness()
   async ready(@Res() reply: FastifyReply) {
     const databaseReachable = await this.healthCheck.pingDatabase();
 
@@ -42,11 +50,13 @@ export class HealthController {
   }
 
   @Get('health/event-loop')
+  @ApiEventLoop()
   eventLoop() {
     return this.eventLoopMonitor.snapshot() ?? { status: 'not-initialized' };
   }
 
   @Get('metrics')
+  @ApiMetrics()
   async metricsEndpoint(@Res() reply: FastifyReply) {
     const loop = this.eventLoopMonitor.snapshot();
     if (loop) {
