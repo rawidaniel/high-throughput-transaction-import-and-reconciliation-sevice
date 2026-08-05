@@ -20,6 +20,11 @@ import {
   NoFileUploadedError,
 } from '../../domain/domain-errors';
 import { ConcurrentUploadLimitInterceptor } from '../common/interceptors/concurrent-upload-limit.interceptor';
+import {
+  ApiCancelImport,
+  ApiCreateImport,
+  ApiGetImportStatus,
+} from './decorator/imports.decorator';
 import { CreateImportResponseDto } from './dto/create-import-response.dto';
 import { ImportSummaryDto, RejectedRecordsDto } from './dto/import-reports.dto';
 import { ImportStatusDto } from './dto/import-status.dto';
@@ -39,6 +44,7 @@ export class ImportController {
   @Post()
   @HttpCode(202)
   @UseInterceptors(ConcurrentUploadLimitInterceptor)
+  @ApiCreateImport()
   async create(
     @Req() request: FastifyRequest,
   ): Promise<CreateImportResponseDto> {
@@ -85,6 +91,7 @@ export class ImportController {
   }
 
   @Get(':id')
+  @ApiGetImportStatus()
   async getStatus(@Param('id') id: string): Promise<ImportStatusDto> {
     const record = await this.getImportStatus.execute(id);
     return ImportStatusDto.from(record);
@@ -92,6 +99,7 @@ export class ImportController {
 
   @Post(':id/cancel')
   @HttpCode(202)
+  @ApiCancelImport()
   async cancel(@Param('id') id: string) {
     const result = await this.cancelImport.execute(id);
     return { id, status: result.status };
