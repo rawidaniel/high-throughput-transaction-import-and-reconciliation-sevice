@@ -21,6 +21,7 @@ import { TransactionRepository } from '../infrastructure/repository/transaction.
 import { ExponentialBackoffRetryPolicy } from '../infrastructure/resilience/exponential-backoff-retry.policy';
 import { ReadlineLineReader } from '../infrastructure/streaming/readline-line-reader';
 import { PinoLogger } from '../infrastructure/system/pino-logger';
+import { ObservabilityModule } from '../modules/observability.module';
 import { ResilienceModule } from '../modules/resilience.module';
 import { SystemModule } from '../modules/system.module';
 import { JobPollerService } from '../worker/job-poller.service';
@@ -31,6 +32,7 @@ import { WorkerMetricsServer } from './worker-metrics.server';
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     SystemModule,
+    ObservabilityModule,
     ResilienceModule,
   ],
   providers: [
