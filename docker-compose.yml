@@ -15,19 +15,19 @@ services:
       test:
         [
           'CMD-SHELL',
-          'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-transactions}',
+          'psql "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@localhost:5432/${POSTGRES_DB:-transactions}" -c "SELECT 1" > /dev/null 2>&1',
         ]
       interval: 5s
       timeout: 5s
-      retries: 10
-      start_period: 10s
+      retries: 15
+      start_period: 15s
 
   # Migrations — runs once, then exits
   migrate:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: 'no'
+    restart: on-failure:3
     depends_on:
       postgres:
         condition: service_healthy
