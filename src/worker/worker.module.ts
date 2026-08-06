@@ -6,14 +6,12 @@ import {
   JOB_REPOSITORY,
   LINE_READER,
   LOGGER,
-  METRICS_RECORDER,
   RETRY_POLICY,
   RISK_SCORING_POOL,
   TRANSACTION_REPOSITORY,
 } from '../application/ports/tokens';
 import { ProcessImportFileUseCase } from '../application/use-cases/process-import-file.use-case';
 import { WorkerThreadPool } from '../infrastructure/concurrency/worker-thread-pool';
-import { PrometheusMetricsRecorder } from '../infrastructure/observability/prometheus-metrics-recorder';
 import { PrismaModule } from '../infrastructure/prisma/prisma.module';
 import { ImportFileRepository } from '../infrastructure/repository/import-file.repository';
 import { JobRepository } from '../infrastructure/repository/job.repository';
@@ -42,7 +40,6 @@ import { WorkerMetricsServer } from './worker-metrics.server';
     { provide: LINE_READER, useClass: ReadlineLineReader },
     { provide: RISK_SCORING_POOL, useClass: WorkerThreadPool },
     { provide: RETRY_POLICY, useClass: ExponentialBackoffRetryPolicy },
-    { provide: METRICS_RECORDER, useClass: PrometheusMetricsRecorder },
     { provide: LOGGER, useClass: PinoLogger },
     ProcessImportFileUseCase,
     JobPollerService,
