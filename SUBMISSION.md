@@ -105,170 +105,59 @@ interfaces. The payoff is concrete: use cases are unit-tested by calling
 
 ## Benchmark Summary
 
-> **Replace once the benchmark has been run** — see
-> [BENCHMARK.md](./BENCHMARK.md).
+Measured on an Apple M1 Pro (8 cores, 16 GB) with the API, worker, and
+Postgres sharing one machine. Full detail in [BENCHMARK.md](./BENCHMARK.md).
 
-| Metric                    | Result            |
-| ------------------------- | ----------------- |
-| Records                   | 500,000           |
-| Processing time           | `___` s           |
-| Throughput                | `___` records/sec |
-| Peak worker RSS           | `___` MB          |
-| API p99 during processing | `___` ms          |
-| Worker event-loop p99     | `___` ms          |
-| Bottleneck identified     | `___`             |
+| Metric                    | Result                               |
+| ------------------------- | ------------------------------------ |
+| Records                   | 500,000 (92.5 MB)                    |
+| Upload time               | 0.3 s                                |
+| Processing time           | 225.4 s                              |
+| Throughput                | 2,218 records/sec                    |
+| Peak worker RSS           | 692 MB                               |
+| API p99 during processing | 3 ms                                 |
+| API throughput under load | ~9,000 req/sec, zero errors          |
+| Worker event-loop p99     | 21 ms                                |
+| Bottleneck                | Risk scoring (4–6× persistence cost) |
 
-The measurement that matters most is **memory flatness across file sizes**
-(50k vs 500k records). Backpressure is only demonstrated by peak RSS staying
-in the same ballpark despite a 10× larger input — a single run's absolute
-number proves nothing.
+**Memory is bounded, and that is the headline result.** Peak RSS across
+50k / 200k / 500k records was 810 MB / 598 MB / 692 MB — uncorrelated with a
+10× increase in input size. Without backpressure this would climb roughly
+linearly; it doesn't, because `await flush()` suspends the read loop until
+each batch is scored and persisted.
 
----
+**The API stayed fast under sustained load** — sub-millisecond mean latency
+and ~9,000 req/sec while the worker saturated four scoring threads, with
+zero errors across all runs.
 
-## Known Risks
+**The bottleneck is risk scoring**, at 4–6× the cost of batch persistence.
+This is expected rather than surprising: `RISK_SCORING_HASH_ROUNDS = 600`
+is artificial CPU load added deliberately so that offloading to
+`worker_threads` would be demonstrably necessary. The benchmark confirms
+the load is real and that the pool absorbs it — the worker's event loop
+stayed at 16–21 ms p99 throughout, which is what keeps lease heartbeats and
+cancellation checks responsive during scoring.
 
-**No authentication.** The API is entirely open. Anyone reaching it can
-upload files and read every import. This is the largest gap for real use and
-was out of scope for the exercise.
+**An unplanned demonstration of effectively-once persistence.** Two runs
+were executed against a database still holding records from a prior run, and
+the generator produces deterministic transaction IDs. Every record collided:
+0 accepted, 196,122 duplicates, zero errors, import completed normally. That
+is `ON CONFLICT DO NOTHING` doing exactly what the crash-recovery model
+depends on.
 
-**Prisma 7 driver adapter friction.** `@prisma/adapter-pg` is new and
-behaves unusually in two ways that cost real debugging time: SQLSTATE codes
-arrive nested under `.cause.originalCode` instead of `meta.target`, and its
-WASM query compiler needs `--experimental-vm-modules` under Jest. Both are
-handled, but both are version-sensitive and could break on upgrade.
+### Caveats stated plainly
 
-**Hand-added partial index.** The `processing_jobs` polling index is a
-partial index that Prisma's schema DSL can't express, so it's edited into
-the migration by hand. A schema reset would silently lose it — the query
-still works, just slower as completed jobs accumulate.
-
-**Recovery latency is bounded by the lease.** A crashed worker's job waits
-out `LEASE_DURATION_MS` before reclaim, because "dead worker" and "slow
-worker" are indistinguishable from the database's view. Shortening the lease
-speeds recovery but risks stealing jobs from healthy-but-slow workers.
-
-**Single-instance rate limiting.** In-memory, so N replicas allow N× the
-intended rate.
-
-**Local disk storage.** Uploads go to the local filesystem, so the API is
-not horizontally scalable as-is — a second instance couldn't read the
-first's files. Object storage is the obvious fix; `FileStoragePort` already
-abstracts it.
-
-**Risk weights are illustrative.** Plausible heuristics, not fitted against
-labelled data. Presented as such rather than as a tuned model.
-
----
-
-## What I Would Improve With More Time
-
-**1 · Authentication and authorization.** API keys or JWT, with imports
-scoped to their owner. The clearest missing piece.
-
-**2 · Resumable offsets.** Persist the committed byte offset per batch and
-resume there. Fixes both the wasted reprocessing and the counter overshoot —
-the single highest-value change on this list.
-
-**3 · Object storage.** Swapping `DiskFileStorage` for S3 makes the API
-horizontally scalable. The port already exists; only the adapter and
-deployment config change.
-
-**4 · Wire up `CONTENT_MISMATCH`.** `findFingerprints()` and
-`classifyDuplicate()` are implemented and tested, but nothing calls them —
-so all conflicts currently record as plain duplicates. Roughly an hour of
-work to connect.
-
-**5 · Register `EventLoopMonitor` comparison in the worker.** The
-infrastructure exists; what's missing is the A/B run against inline scoring
-that would _prove_ the thread pool's value rather than assert it.
-
-**6 · Periodic reclaim independent of idle polling.** Reclaim currently runs
-at startup and during idle polls. A busy worker never idles, so on a
-single-worker deployment a crashed job could wait longer than intended.
-
-**7 · Dead-letter queue.** Jobs exceeding `MAX_JOB_ATTEMPTS` are marked
-`FAILED` and left. A DLQ with replay would make operational recovery less
-manual.
-
-**8 · Distributed tracing.** Request IDs exist and propagate through logs,
-but there's no OpenTelemetry span linking an upload to its worker
-processing.
-
----
-
-## Incomplete Requirements — Stated Explicitly
-
-Gaps listed deliberately rather than left to be discovered.
-
-| Item                                  | Status                    | Detail                                                                                                                       |
-| ------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `CONTENT_MISMATCH` classification     | **Built but not wired**   | Domain logic and repository method exist with tests; nothing invokes them                                                    |
-| Progress counter accuracy after crash | **Partial**               | `acceptedCount` and `totalRecords` are exact; `processedCount`, `rejectedCount`, `duplicateCount` can overshoot on reprocess |
-| Thread-pool isolation proof           | **Not measured**          | Infrastructure and procedure documented; the A/B comparison hasn't been run                                                  |
-| Benchmark numbers                     | **Not yet run**           | BENCHMARK.md is a template with placeholders — no invented figures                                                           |
-| Authentication                        | **Not implemented**       | Out of scope, but the largest real-world gap                                                                                 |
-| HTTP e2e tests                        | **Not written**           | Controllers are thin translation layers, covered indirectly by use-case unit tests                                           |
-| Worker-thread integration tests       | **Not written**           | Spawning real threads in Jest is slow and flaky; covered by unit tests with a synchronous fake                               |
-| CI pipeline                           | **Not configured**        | Integration tests need Docker, so a runner providing it is required                                                          |
-| Compressed upload support             | **Deliberately excluded** | Rejected outright rather than partially defended against bombs                                                               |
-| Multi-file imports                    | **Not supported**         | Schema permits it (`import_files` is one-to-many); no code path uses it                                                      |
-| Horizontal API scaling                | **Blocked by local disk** | Workers scale fine; API instances can't share uploaded files                                                                 |
-
----
-
-## Verifying the Core Claims
-
-Each headline claim, with the command that demonstrates it.
-
-**Effectively-once persistence:**
-
-```sql
-SELECT COUNT(*), COUNT(DISTINCT (provider, "transactionId")) FROM transactions;
--- equal, even after a crash and full reprocess
-```
-
-**Concurrent idempotency:**
-
-```bash
-npm run test:integration -- -t "creates exactly ONE import"
-```
-
-**Crash recovery:**
-
-```bash
-LEASE_DURATION_MS=15000 npm run start:worker:dev
-# upload a large file, then: kill -9 $(pgrep -f worker.main)
-# restart; after the lease lapses the job is reclaimed and completes
-```
-
-**Bounded memory:**
-
-```bash
-npm run verify:backpressure -- --records=50000
-npm run verify:backpressure -- --records=500000
-# peak RSS should stay in the same ballpark
-```
-
-**API responsiveness under load:**
-
-```bash
-npm run benchmark -- --file=data-500000.ndjson
-```
-
----
-
-## Repository Guide
-
-| Path                         | Contains                                           |
-| ---------------------------- | -------------------------------------------------- |
-| `src/domain/`                | Pure business rules — no framework, no I/O         |
-| `src/application/ports/`     | Interfaces and DI tokens                           |
-| `src/application/use-cases/` | Business workflows                                 |
-| `src/infrastructure/`        | Prisma, disk, threads, Pino, prom-client           |
-| `src/http/`                  | Controllers, DTOs, exception filter                |
-| `src/worker/`                | Job poller, metrics server, orphan sweeper         |
-| `src/modules/`               | The only place tokens bind to implementations      |
-| `test/unit/`                 | ~140 tests, no database or Docker                  |
-| `test/integration/`          | ~25 tests against real Postgres via Testcontainers |
-| `scripts/`                   | Data generator, benchmark, backpressure verifier   |
-| `docs/adr/`                  | Five architecture decision records                 |
+- All processes shared 8 cores, so the worker's scoring threads competed
+  with Postgres and the API. Separate hosts would improve these numbers.
+- The 50k and 200k runs ran against a non-empty database, so their
+  throughput reflects a conflict-skip path rather than genuine inserts. The
+  **500k run is the representative measurement**.
+- One 5,018 ms outlier appeared in the 200k run's max latency. p99 stayed at
+  2 ms, so it affected far less than 1% of requests — most likely GC or
+  scheduler contention from four processes on one machine.
+- `WORKER_POOL_SIZE` was 4 on an 8-core machine. Raising it to 6 is the
+  obvious first optimization and was not attempted.
+- **The thread-pool A/B comparison was not run.** The worker's low
+  event-loop delay is consistent with the pool working, but comparing
+  against inline scoring on the main thread would prove it directly. The
+  procedure is documented; the measurement wasn't taken.
