@@ -15,12 +15,14 @@ services:
       test:
         [
           'CMD-SHELL',
-          'psql "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@localhost:5432/${POSTGRES_DB:-transactions}" -c "SELECT 1" > /dev/null 2>&1',
+          'pg_isready -h 127.0.0.1 -p 5432 -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-transactions}"',
         ]
       interval: 5s
       timeout: 5s
-      retries: 15
-      start_period: 15s
+      retries: 10
+      start_period: 120s
+    stop_signal: SIGINT
+    stop_grace_period: 60s
 
   # Migrations — runs once, then exits
   migrate:
