@@ -12,10 +12,16 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
+      # -h forces TCP: the temp server used during initdb listens on the unix
+      # socket only, so this cannot go green before the real server is up.
+      # Naming the database catches a stale volume created with a different
+      # POSTGRES_DB — pg_isready reports ready even when the db is missing.
+      # No password needed: loopback is 'trust' in this image's pg_hba.conf.
+      # Output is not discarded, so `docker inspect` shows why a probe failed.
       test:
         [
           'CMD-SHELL',
-          'pg_isready -h 127.0.0.1 -p 5432 -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-transactions}"',
+          'psql -h 127.0.0.1 -p 5432 -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-transactions}" -c "SELECT 1"',
         ]
       interval: 5s
       timeout: 5s
